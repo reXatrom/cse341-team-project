@@ -1,7 +1,8 @@
+
 import app from './app.js';
 import { connectToDb } from './src/db/connect.js';
 
-const NODE_ENV = process.env.NODE_ENV?.toLowerCase() || 'production';
+const NODE_ENV = process.env.NODE_ENV?.toLowerCase() || 'development';
 const PORT = process.env.PORT || 3000;
 
 // Connect to MongoDB before accepting requests.
@@ -27,6 +28,7 @@ if (NODE_ENV.includes('dev')) {
     }
 }
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://127.0.0.1:${PORT}`);
+// Start the application.
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
 });
