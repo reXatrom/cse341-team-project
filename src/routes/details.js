@@ -1,13 +1,38 @@
+
 import { getDb } from '../db/connect.js';
 
 export default async (req, res) => {
-    const { tripId } = req.params;
-    const db = getDb();
-    const details = await db.collection('trips').findOne({ id: tripId });
-    details.schedules = await db.collection('schedules').find({ tripId }).toArray();
+    try {
+        const { tripId } = req.params;
+        const db = getDb();
 
-    res.render('trips/details', {
-        title: 'Trip Details',
-        details
-    });
+        // Find the selected trip.
+        const details = await db.collection('trips').findOne({
+            id: tripId
+        });
+
+        // Return 404 if the trip does not exist.
+        if (!details) {
+            return res.status(404).send('Trip not found.');
+        }
+
+        // Find schedules associated with this trip.
+        const schedules = await db
+            .collection('schedules')
+            .find({ tripId })
+            .toArray();
+
+        details.schedules = schedules;
+
+        return res.render('trips/details', {
+            title: 'Trip Details',
+            details
+        });
+    } catch (error) {
+        console.error('Error loading trip details:', error);
+
+        return res.status(500).send(
+            'Unable to load trip details.'
+        );
+    }
 };

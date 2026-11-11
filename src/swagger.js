@@ -19,23 +19,45 @@ const options = {
             schemas: {
                 Passenger: {
                     type: 'object',
+                    required: [
+                        'firstName',
+                        'lastName',
+                        'email',
+                        'phone'
+                    ],
                     properties: {
                         firstName: { type: 'string' },
                         lastName: { type: 'string' },
-                        email: { type: 'string', format: 'email' },
+                        email: {
+                            type: 'string',
+                            format: 'email'
+                        },
                         phone: { type: 'string' }
                     }
                 },
                 Booking: {
                     type: 'object',
+                    required: [
+                        'id',
+                        'scheduleId',
+                        'tripId',
+                        'ticketClass',
+                        'selectedDay',
+                        'passengers'
+                    ],
                     properties: {
                         id: { type: 'string' },
                         scheduleId: { type: 'integer' },
-                        tripId: { type: 'integer' },
+                        tripId: {
+                            type: 'string',
+                            example: 'alpine-panorama'
+                        },
                         ticketClass: { type: 'string' },
                         selectedDay: { type: 'string' },
                         passengers: {
                             type: 'array',
+                            minItems: 1,
+                            maxItems: 8,
                             items: {
                                 $ref: '#/components/schemas/Passenger'
                             }
@@ -52,7 +74,8 @@ const options = {
             '/api/bookings': {
                 get: {
                     summary: 'Retrieve all bookings',
-                    description: 'Returns booking records from MongoDB.',
+                    description:
+                        'Returns booking records from MongoDB. Available in development mode only.',
                     tags: ['Bookings'],
                     responses: {
                         200: {
@@ -67,6 +90,9 @@ const options = {
                                     }
                                 }
                             }
+                        },
+                        404: {
+                            description: 'Endpoint unavailable outside development mode'
                         },
                         500: {
                             description: 'Server error'

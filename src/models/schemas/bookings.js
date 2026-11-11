@@ -40,8 +40,9 @@ const bookingSchema = new mongoose.Schema(
             required: true
         },
         tripId: {
-            type: Number,
-            required: true
+            type: String,
+            required: true,
+            trim: true
         },
         ticketClass: {
             type: String,
