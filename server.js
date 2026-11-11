@@ -1,18 +1,34 @@
+
+import mongoose from 'mongoose';
 import app from './app.js';
 import { connectToDb } from './src/db/connect.js';
 
 const NODE_ENV = process.env.NODE_ENV?.toLowerCase() || 'production';
 const PORT = process.env.PORT || 3000;
 
-// Connect to MongoDB before accepting requests.
+const mongoUri = process.env.MONGODB_URI;
+const databaseName = process.env.MONGODB_DB_NAME || 'practice';
+
+if (!mongoUri) {
+    throw new Error('MONGODB_URI is required.');
+}
+
+// Connect the existing MongoDB driver.
 await connectToDb();
+
+// Connect Mongoose to the same database.
+await mongoose.connect(mongoUri, {
+    dbName: databaseName
+});
+
+console.log('Mongoose connected successfully.');
 
 // Start the live-reload WebSocket server in development mode.
 if (NODE_ENV.includes('dev')) {
     const ws = await import('ws');
 
     try {
-        const wsPort = parseInt(PORT) + 1;
+        const wsPort = parseInt(PORT, 10) + 1;
         const wsServer = new ws.WebSocketServer({ port: wsPort });
 
         wsServer.on('listening', () => {

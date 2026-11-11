@@ -1,12 +1,30 @@
-import { getDb } from '../db/connect.js';
 
-export default async (req, res) => {
-    const { confirmationId } = req.params;
+import { getBookingById } from '../models/bookings.js';
 
-    const confirmation = await getDb().collection('confirmations').findOne({ id: confirmationId });
+// Display the confirmation page for a completed booking.
+const confirmationPage = async (req, res) => {
+    try {
+        const { confirmationId } = req.params;
 
-    res.render('trips/confirm', {
-        title: 'Trip Confirmation',
-        confirmation
-    });
+        // Retrieve the booking using its confirmation code.
+        const booking = await getBookingById(confirmationId);
+
+        if (!booking) {
+            return res.status(404).send('Booking not found.');
+        }
+
+        // Keep the variable name expected by the existing EJS template.
+        return res.render('trips/confirm', {
+            title: 'Trip Confirmation',
+            confirmation: booking
+        });
+    } catch (error) {
+        console.error('Error retrieving booking confirmation:', error);
+
+        return res.status(500).send(
+            'Unable to load booking confirmation.'
+        );
+    }
 };
+
+export default confirmationPage;

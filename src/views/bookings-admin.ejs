@@ -1,0 +1,104 @@
+<%- include('partials/header') %>
+
+    <main class="container">
+        <section class="bookings-admin">
+            <h1>Bookings Administration</h1>
+            <p>View and manage Kizuna Rail booking records.</p>
+
+            <div id="bookings-status" role="status" aria-live="polite">
+                Loading bookings...
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table id="bookings-table" style="width: 100%; border-collapse: collapse;" hidden>
+                    <thead>
+                        <tr>
+                            <th scope="col">Booking Reference</th>
+                            <th scope="col">Passenger</th>
+                            <th scope="col">Email</th>
+                            <th scope="col">Ticket Class</th>
+                            <th scope="col">Travel Day</th>
+                            <th scope="col">Passengers</th>
+                            <th scope="col">Booked On</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookings-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        async function loadBookings() {
+            const status = document.getElementById('bookings-status');
+            const table = document.getElementById('bookings-table');
+            const tbody = document.getElementById('bookings-body');
+
+            try {
+                const response = await fetch('/api/bookings');
+
+                if (!response.ok) {
+                    throw new Error('Failed to retrieve bookings.');
+                }
+
+                const bookings = await response.json();
+
+                if (!Array.isArray(bookings)) {
+                    throw new Error('Unexpected API response.');
+                }
+
+                tbody.replaceChildren();
+
+                if (bookings.length === 0) {
+                    status.textContent = 'No bookings found.';
+                    table.hidden = true;
+                    return;
+                }
+
+                for (const booking of bookings) {
+                    const passenger = booking.passengers?.[0];
+                    const fullName = passenger
+                        ? `${passenger.firstName} ${passenger.lastName}`
+                        : 'Not available';
+
+                    const date = booking.createdAt
+                        ? new Date(booking.createdAt).toLocaleDateString()
+                        : 'Not available';
+
+                    const values = [
+                        booking.id,
+                        fullName,
+                        passenger?.email || 'Not available',
+                        booking.ticketClass,
+                        booking.selectedDay,
+                        booking.passengers?.length ?? 0,
+                        date
+                    ];
+
+                    const row = document.createElement('tr');
+
+                    for (const value of values) {
+                        const cell = document.createElement('td');
+                        cell.textContent = String(value ?? 'Not available');
+                        cell.style.padding = '12px';
+                        cell.style.borderBottom = '1px solid #ddd';
+                        row.appendChild(cell);
+                    }
+
+                    tbody.appendChild(row);
+                }
+
+                status.textContent = `${bookings.length} booking(s) found.`;
+                table.hidden = false;
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                status.textContent =
+                    'Unable to load bookings. Please try again later.';
+                table.hidden = true;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadBookings);
+    </script>
+
+    <%- include('partials/footer') %>
