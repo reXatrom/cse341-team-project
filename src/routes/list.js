@@ -1,17 +1,22 @@
-import { getDb } from '../db/connect.js';
 
-export default async (req, res) => {
-    const db = getDb();
-    const [regions, trips, seasons] = await Promise.all([
-        db.collection('trips').distinct('region'),
-        db.collection('trips').find({}).toArray(),
-        db.collection('trips').distinct('bestSeason')
-    ]);
+import { getAllTrips } from '../models/trips.js';
 
-    res.render('trips/list', {
-        title: 'Scenic Train Trips',
-        regions,
-        trips,
-        seasons
-    });
+export default async (req, res, next) => {
+    try {
+        // Retrieve trips using the Mongoose model.
+        const trips = await getAllTrips();
+
+        // Build unique region and season filter options.
+        const regions = [...new Set(trips.map(trip => trip.region))];
+        const seasons = [...new Set(trips.map(trip => trip.bestSeason))];
+
+        res.render('trips/list', {
+            title: 'Scenic Train Trips',
+            regions,
+            trips,
+            seasons
+        });
+    } catch (error) {
+        next(error);
+    }
 };
