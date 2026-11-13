@@ -59,6 +59,8 @@
             </div>
         </div>
 
+        <!-- Dynamic Monthly Schedule Calendar -->
+
         <div class="route-operating">
             <h2>Operating Schedule</h2>
             <div class="months-grid">
@@ -67,6 +69,51 @@
                 <% }); %>
             </div>
         </div>
+
+
+        <section class="schedule-calendar" id="schedule-calendar">
+            <h2>Monthly Schedule Calendar</h2>
+
+            <div class="calendar-header">
+                <button type="button" id="calendar-prev" aria-label="Previous month">
+                    &larr;
+                </button>
+
+                <h3 id="calendar-month-label"></h3>
+
+                <button type="button" id="calendar-next" aria-label="Next month">
+                    &rarr;
+                </button>
+            </div>
+
+            <div class="calendar-weekdays">
+                <span>Sun</span>
+                <span>Mon</span>
+                <span>Tue</span>
+                <span>Wed</span>
+                <span>Thu</span>
+                <span>Fri</span>
+                <span>Sat</span>
+            </div>
+
+            <div class="calendar-grid" id="calendar-grid"></div>
+
+            <div class="calendar-selection" id="calendar-selection" aria-live="polite">
+                Select a highlighted date to view available departures.
+            </div>
+        </section>
+
+        <script id="schedule-calendar-data" type="application/json"><%- JSON.stringify({
+            schedules: activeSchedules.map(({ id, departureTime, arrivalTime, daysOfWeek }) => ({
+                id,
+                departureTime,
+                arrivalTime,
+                daysOfWeek
+            })),
+            operatingMonths: details.operatingMonths
+        }).replace(/</g, '\\u003c') %></script>
+
+        <script src="/js/schedule-calendar.js" defer></script>
 
         <% if (details.schedules && details.schedules.length > 0) { %>
         <div class="route-schedules">
