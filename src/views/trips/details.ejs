@@ -115,11 +115,11 @@
 
         <script src="/js/schedule-calendar.js" defer></script>
 
-        <% if (details.schedules && details.schedules.length > 0) { %>
-        <div class="route-schedules">
-            <h2>Available Schedules</h2>
-            <div class="schedules-grid">
-                <% details.schedules.forEach(function(schedule) { %>
+        <% if (activeSchedules && activeSchedules.length> 0) { %>
+            <div class="route-schedules">
+                <h2>Available Schedules</h2>
+                <div class="schedules-grid">
+                    <% activeSchedules.forEach(function(schedule) { %>
                 <div class="schedule-card">
                     <div class="schedule-times">
                         <div class="time-block">
