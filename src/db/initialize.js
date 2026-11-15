@@ -19,7 +19,14 @@ const initializeDatabase = async (db) => {
 
   for (const [collectionName, documents] of starterCollections) {
     const collection = db.collection(collectionName);
+
     await collection.deleteMany({});
+
+    // Prevent duplicate trip IDs at the database level.
+    if (collectionName === 'trips') {
+      await collection.createIndex({ id: 1 }, { unique: true });
+    }
+
     await collection.insertMany(documents);
   }
 
