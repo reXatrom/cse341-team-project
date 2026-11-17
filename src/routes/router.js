@@ -20,6 +20,9 @@ router.get('/trains', trainsPage);
 // Trains API
 router.get('/api/trains', trainsApi);
 
+// Trips API
+router.use('/api/trips', tripsApiRouter);
+
 // Schedules API
 router.use('/api/schedules', schedulesRouter);
 
