@@ -7,6 +7,8 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './src/config/swagger.js';
 import globalMiddleware from './src/middleware/global.js';
 import routes from './src/routes/router.js';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './src/docs/swagger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = Path.dirname(__filename);
@@ -32,6 +34,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(globalMiddleware);
+
+// Serve Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 app.use('/', routes);
 
 // Catch requests that did not match a route.

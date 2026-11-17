@@ -4,6 +4,7 @@ import tripsApiRouter from './trips-api.js';
 import { trainsApi, trainsPage } from './trains.js';
 import { Router } from 'express';
 import { homePage, aboutPage, testErrorPage } from './index.js';
+import schedulesRouter from './schedules.js';
 
 const router = Router();
 
@@ -19,10 +20,10 @@ router.get('/trains', trainsPage);
 // Trains API
 router.get('/api/trains', trainsApi);
 
-// Trips API
-router.use('/api/trips', tripsApiRouter);
+// Schedules API
+router.use('/api/schedules', schedulesRouter);
 
-// Rail trips website
+// Rail trips
 router.use('/trips', railTripsRouter);
 
 // Test 500 error page
