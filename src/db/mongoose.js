@@ -1,12 +1,15 @@
 
 import mongoose from 'mongoose';
 
-export async function connectMongoose() {
-  const connectionString = process.env.MONGODB_URI;
-  const databaseName = process.env.MONGODB_DB_NAME || 'practice';
+export async function connectMongoose(options = {}) {
+  const connectionString =
+    options.connectionString || process.env.MONGODB_URI;
+
+  const databaseName =
+    options.databaseName || process.env.MONGODB_DB_NAME || 'practice';
 
   if (!connectionString) {
-    throw new Error('MONGODB_URI is required for Mongoose.');
+    throw new Error('MongoDB connection string is required for Mongoose.');
   }
 
   if (mongoose.connection.readyState === 1) {
