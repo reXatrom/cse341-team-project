@@ -1,4 +1,6 @@
+
 import railTripsRouter from './trips.js';
+import tripsApiRouter from './trips-api.js';
 import { trainsApi, trainsPage } from './trains.js';
 import { Router } from 'express';
 import { homePage, aboutPage, testErrorPage } from './index.js';
