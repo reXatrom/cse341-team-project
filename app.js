@@ -4,16 +4,41 @@ import Path from 'path';
 import { fileURLToPath } from 'url';
 import pkg from './package.json' with { type: 'json' };
 import swaggerUi from 'swagger-ui-express';
-import swaggerSpec from './src/config/swagger.js';
+import tripsSwaggerSpec from './src/config/swagger.js';
+import schedulesSwaggerSpec from './src/docs/swagger.js';
 import globalMiddleware from './src/middleware/global.js';
 import routes from './src/routes/router.js';
-import swaggerUi from 'swagger-ui-express';
-import swaggerSpec from './src/docs/swagger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = Path.dirname(__filename);
 
 const app = express();
+
+// Combine Trips and Schedules Swagger documentation.
+const swaggerSpec = {
+    ...tripsSwaggerSpec,
+    info: {
+        title: 'Kizuna Rail API',
+        version: '1.0.0',
+        description: 'API documentation for the Kizuna Rail application.'
+    },
+    tags: [
+        { name: 'Trips', description: 'Operations for managing railway trips' },
+        { name: 'Schedules', description: 'Schedule management endpoints' }
+    ],
+    paths: {
+        ...tripsSwaggerSpec.paths,
+        ...schedulesSwaggerSpec.paths
+    },
+    components: {
+        ...tripsSwaggerSpec.components,
+        ...schedulesSwaggerSpec.components,
+        schemas: {
+            ...tripsSwaggerSpec.components?.schemas,
+            ...schedulesSwaggerSpec.components?.schemas
+        }
+    }
+};
 
 // Add version info to res.locals for access in templates.
 app.use((req, res, next) => {
@@ -30,12 +55,9 @@ app.set('views', Path.join(__dirname, 'src/views'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Swagger API documentation.
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
 app.use(globalMiddleware);
 
-// Serve Swagger UI
+// Serve combined Swagger UI documentation once.
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/', routes);
