@@ -1,0 +1,51 @@
+
+<%- include('../partials/header') %>
+
+<article class="auth-page">
+    <section class="auth-card">
+        <div class="auth-heading">
+            <h1><%= title %></h1>
+            <p>Welcome back to Kizuna Rail. Sign in to continue.</p>
+        </div>
+
+        <% if (error) { %>
+            <div class="auth-error" role="alert">
+                <%= error %>
+            </div>
+        <% } %>
+
+        <form class="auth-form" method="POST" action="/auth/login">
+            <div class="auth-form-group">
+                <label for="identifier">Username or Email</label>
+                <input
+                    type="text"
+                    id="identifier"
+                    name="identifier"
+                    value="<%= identifier || '' %>"
+                    autocomplete="username"
+                    required
+                >
+            </div>
+
+            <div class="auth-form-group">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <button class="auth-button" type="submit">Sign In</button>
+        </form>
+
+        <p class="auth-switch">
+            Don't have an account?
+            <a href="/auth/register">Create an account</a>
+        </p>
+    </section>
+</article>
+
+<%- include('../partials/footer') %>

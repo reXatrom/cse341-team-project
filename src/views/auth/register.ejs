@@ -1,0 +1,79 @@
+
+<%- include('../partials/header') %>
+
+<article class="auth-page">
+    <section class="auth-card">
+        <div class="auth-heading">
+            <h1><%= title %></h1>
+            <p>Create your Kizuna Rail account to get started.</p>
+        </div>
+
+        <% if (error) { %>
+            <div class="auth-error" role="alert">
+                <%= error %>
+            </div>
+        <% } %>
+
+        <form class="auth-form" method="POST" action="/auth/register">
+            <div class="auth-form-group">
+                <label for="displayName">Full Name</label>
+                <input
+                    type="text"
+                    id="displayName"
+                    name="displayName"
+                    value="<%= formData?.displayName || '' %>"
+                    autocomplete="name"
+                    maxlength="100"
+                    required
+                >
+            </div>
+
+            <div class="auth-form-group">
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value="<%= formData?.username || '' %>"
+                    autocomplete="username"
+                    minlength="3"
+                    maxlength="30"
+                    required
+                >
+            </div>
+
+            <div class="auth-form-group">
+                <label for="email">Email Address</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="<%= formData?.email || '' %>"
+                    autocomplete="email"
+                    required
+                >
+            </div>
+
+            <div class="auth-form-group">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    autocomplete="new-password"
+                    minlength="8"
+                    required
+                >
+            </div>
+
+            <button class="auth-button" type="submit">Create Account</button>
+        </form>
+
+        <p class="auth-switch">
+            Already have an account?
+            <a href="/auth/login">Sign in</a>
+        </p>
+    </section>
+</article>
+
+<%- include('../partials/footer') %>
