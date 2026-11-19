@@ -3,16 +3,32 @@ import express from 'express';
 import Path from 'path';
 import { fileURLToPath } from 'url';
 import pkg from './package.json' with { type: 'json' };
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 import swaggerUi from 'swagger-ui-express';
 import tripsSwaggerSpec from './src/config/swagger.js';
 import schedulesSwaggerSpec from './src/docs/swagger.js';
 import globalMiddleware from './src/middleware/global.js';
 import routes from './src/routes/router.js';
+import { getMongoClientPromise } from './src/db/connect.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = Path.dirname(__filename);
 
 const app = express();
+
+const NODE_ENV = process.env.NODE_ENV?.toLowerCase() || 'development';
+const isTestEnvironment = NODE_ENV === 'test';
+const sessionSecret = process.env.SESSION_SECRET;
+
+if (!sessionSecret) {
+    throw new Error('SESSION_SECRET is required.');
+}
+
+// Trust the hosting proxy when running in production.
+if (NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
 
 // Combine Trips and Schedules Swagger documentation.
 const swaggerSpec = {
@@ -40,7 +56,17 @@ const swaggerSpec = {
     }
 };
 
-// Add version info to res.locals for access in templates.
+// Use memory sessions for tests and MongoDB sessions otherwise.
+const sessionStore = isTestEnvironment
+    ? new session.MemoryStore()
+    : MongoStore.create({
+        clientPromise: getMongoClientPromise(),
+        dbName: process.env.MONGODB_DB_NAME || 'practice',
+        collectionName: 'sessions',
+        ttl: 14 * 24 * 60 * 60
+    });
+
+// Add version information to EJS templates.
 app.use((req, res, next) => {
     res.locals.appVersion = pkg.version;
     next();
@@ -55,6 +81,21 @@ app.set('views', Path.join(__dirname, 'src/views'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Configure user sessions.
+app.use(session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    store: sessionStore,
+    cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: NODE_ENV === 'production',
+        maxAge: 14 * 24 * 60 * 60 * 1000
+    }
+}));
+
+// Run global middleware after session middleware.
 app.use(globalMiddleware);
 
 // Serve combined Swagger UI documentation once.

@@ -7,8 +7,16 @@ import {
 } from '../src/db/mongoose.js';
 import { initializeDatabase } from '../src/db/initialize.js';
 
+// Identify automated test execution.
+process.env.NODE_ENV = 'test';
+
+// Keep automated tests isolated from the shared team database.
 const connectionString = inject('MONGODB_TEST_URI');
 const databaseName = 'kizuna-rail-test';
+
+process.env.MONGODB_DB_NAME = databaseName;
+process.env.SESSION_SECRET =
+  'test-only-session-secret-do-not-use-in-production';
 
 beforeAll(async () => {
   await connectToDb({

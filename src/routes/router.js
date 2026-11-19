@@ -5,14 +5,27 @@ import tripsApiRouter from './trips-api.js';
 import { trainsApi, trainsPage } from './trains.js';
 import { homePage, aboutPage, testErrorPage } from './index.js';
 import schedulesRouter from './schedules.js';
+import authRouter from './auth.js';
+import { requirePageRole } from '../middleware/auth.js';
+import { adminDashboard } from '../controllers/admin.js';
 
 const router = Router();
+
+// Authentication routes
+router.use('/auth', authRouter);
 
 // Home page
 router.get('/', homePage);
 
 // About page
 router.get('/about', aboutPage);
+
+// Protected Admin Dashboard
+router.get(
+    '/admin/dashboard',
+    requirePageRole('admin'),
+    adminDashboard
+);
 
 // Trains page
 router.get('/trains', trainsPage);

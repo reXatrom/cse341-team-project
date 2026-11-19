@@ -1,0 +1,16 @@
+
+<%- include('../partials/header') %>
+
+<article class="error-page">
+    <h1>403 - Access Forbidden</h1>
+
+    <p>
+        <%= error || 'You do not have permission to access this page.' %>
+    </p>
+
+    <p>
+        Return to the <a href="/">homepage</a> to continue browsing.
+    </p>
+</article>
+
+<%- include('../partials/footer') %>
