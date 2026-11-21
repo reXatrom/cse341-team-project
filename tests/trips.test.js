@@ -4,12 +4,78 @@ import request from 'supertest';
 import app from '../app.js';
 
 describe('Trips API', () => {
-    test('GET /api/trips returns all six starter trips', async () => {
+    test('GET /api/trips returns the first page with default pagination', async () => {
         const response = await request(app).get('/api/trips');
 
         expect(response.status).toBe(200);
-        expect(response.body).toBeInstanceOf(Array);
-        expect(response.body).toHaveLength(6);
+        expect(response.body.data).toBeInstanceOf(Array);
+        expect(response.body.data).toHaveLength(6);
+
+        expect(response.body.pagination).toEqual({
+            page: 1,
+            limit: 10,
+            totalItems: 6,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false
+        });
+
+        expect(response.body.filters).toEqual({
+            region: null,
+            season: null,
+            q: null
+        });
+    });
+
+    test('GET /api/trips supports a custom page and limit', async () => {
+        const response = await request(app)
+            .get('/api/trips?page=2&limit=2');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toBeInstanceOf(Array);
+        expect(response.body.data).toHaveLength(2);
+
+        expect(response.body.pagination).toEqual({
+            page: 2,
+            limit: 2,
+            totalItems: 6,
+            totalPages: 3,
+            hasNextPage: true,
+            hasPreviousPage: true
+        });
+    });
+
+    test.each(['0', '-1', '1.5', 'abc'])(
+        'GET /api/trips rejects invalid page value: %s',
+        async (page) => {
+            const response = await request(app)
+                .get(`/api/trips?page=${page}`);
+
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty('error');
+        }
+    );
+
+    test.each(['0', '-1', '1.5', 'abc'])(
+        'GET /api/trips rejects invalid limit value: %s',
+        async (limit) => {
+            const response = await request(app)
+                .get(`/api/trips?limit=${limit}`);
+
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty('error');
+        }
+    );
+
+    test('GET /api/trips rejects a limit greater than 50', async () => {
+        const response = await request(app)
+            .get('/api/trips?limit=51');
+
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty(
+            'error',
+            'Limit cannot exceed 50.'
+        );
     });
 
     test('GET /api/trips/:id returns one trip', async () => {

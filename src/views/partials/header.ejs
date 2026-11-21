@@ -8,29 +8,27 @@
     <link rel="stylesheet" href="/css/main.css">
     <script src="/js/main.js"></script>
 
+    <% if (NODE_ENV.includes('dev')) { %>
+        <script>
+            // Only enable live reload on local development.
+            const host = window.location.hostname;
 
-<% if (NODE_ENV.includes('dev')) { %>
-    <script>
-        // Only enable live reload on local development.
-        const host = window.location.hostname;
+            if (host === 'localhost' || host === '127.0.0.1') {
+                const currentPort = window.location.port;
+                const wsPort = currentPort
+                    ? parseInt(currentPort) + 1
+                    : 3001;
 
-        if (host === 'localhost' || host === '127.0.0.1') {
-            const currentPort = window.location.port;
-            const wsPort = currentPort
-                ? parseInt(currentPort) + 1
-                : 3001;
+                const ws = new WebSocket(`ws://${host}:${wsPort}`);
 
-            const ws = new WebSocket(`ws://${host}:${wsPort}`);
-
-            ws.onclose = () => {
-                setTimeout(() => location.reload(), 2000);
-            };
-        }
-    </script>
-<% } %>
-
-
+                ws.onclose = () => {
+                    setTimeout(() => location.reload(), 2000);
+                };
+            }
+        </script>
+    <% } %>
 </head>
+
 <body>
     <header class="content-grid">
         <div class="content">
@@ -61,6 +59,9 @@
                         <% if (currentUser.role === 'admin') { %>
                             <li>
                                 <a href="/admin/dashboard">Admin Dashboard</a>
+                            </li>
+                            <li>
+                                <a href="/trips-admin">Trips Management</a>
                             </li>
                         <% } %>
 

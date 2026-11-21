@@ -66,17 +66,76 @@ const router = Router();
  *
  * /api/trips:
  *   get:
- *     summary: Retrieve all railway trips
+ *     summary: Retrieve railway trips with pagination
  *     tags: [Trips]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 50
+ *           default: 10
+ *         description: Number of trips per page (maximum 50)
  *     responses:
  *       200:
- *         description: List of all railway trips
+ *         description: Paginated list of railway trips
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Trip'
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Trip'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 25
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 3
+ *                     hasNextPage:
+ *                       type: boolean
+ *                       example: true
+ *                     hasPreviousPage:
+ *                       type: boolean
+ *                       example: false
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     region:
+ *                       type: string
+ *                       nullable: true
+ *                       example: null
+ *                     season:
+ *                       type: string
+ *                       nullable: true
+ *                       example: null
+ *                     q:
+ *                       type: string
+ *                       nullable: true
+ *                       example: null
+ *       400:
+ *         description: Invalid page or limit parameter
  *       500:
  *         description: Failed to fetch trips
  *
@@ -190,7 +249,7 @@ const router = Router();
  *         description: Failed to delete trip
  */
 
-// GET /api/trips - Retrieve all trips
+// GET /api/trips - Retrieve paginated trips
 router.get('/', getAllTrips);
 
 // GET /api/trips/:id - Retrieve one trip
