@@ -1,0 +1,36 @@
+<%- include('../partials/header') %>
+
+    <article class="error-page">
+        <h1>My Dashboard</h1>
+
+        <p>
+            Welcome, <%= currentUser.displayName %>!
+        </p>
+
+        <p>
+            Manage your Kizuna Rail journeys and view
+            your booking history.
+        </p>
+
+        <section aria-labelledby="bookings-heading">
+            <h2 id="bookings-heading">My Bookings</h2>
+
+            <p id="booking-status" role="status">
+                Loading your bookings...
+            </p>
+
+            <ul id="booking-list" hidden></ul>
+        </section>
+
+        <section aria-labelledby="quick-links-heading">
+            <h2 id="quick-links-heading">Quick Links</h2>
+
+            <p>
+                <a href="/trips">Explore Train Trips</a>
+            </p>
+        </section>
+    </article>
+
+    <script src="/js/user-dashboard.js" defer></script>
+
+    <%- include('../partials/footer') %>

@@ -6,11 +6,12 @@ import {
 } from '../models/users.js';
 
 import { getRoleByName } from '../models/roles.js';
+import { dashboardPathForRole } from '../includes/dashboard-redirect.js';
 
 // Display the login page.
 export function loginPage(req, res) {
-  if (req.session.user) {
-    return res.redirect('/');
+  if (req.session?.user) {
+    return res.redirect(dashboardPathForRole(req.session.user.role));
   }
 
   return res.render('auth/login', {
@@ -22,8 +23,8 @@ export function loginPage(req, res) {
 
 // Display the registration page.
 export function registerPage(req, res) {
-  if (req.session.user) {
-    return res.redirect('/');
+  if (req.session?.user) {
+    return res.redirect(dashboardPathForRole(req.session.user.role));
   }
 
   return res.render('auth/register', {
@@ -73,7 +74,6 @@ export async function registerUser(req, res) {
   }
 
   try {
-    // New registrations always receive the standard user role.
     const userRole = await getRoleByName('user');
 
     if (!userRole) {
@@ -145,7 +145,6 @@ export async function loginUser(req, res) {
       });
     });
 
-    // Store only the information needed by the application.
     req.session.user = {
       id: user._id.toString(),
       displayName: user.displayName,
@@ -163,7 +162,7 @@ export async function loginUser(req, res) {
       });
     });
 
-    return res.redirect('/');
+    return res.redirect(dashboardPathForRole(req.session.user.role));
   } catch (error) {
     console.error('Login error:', error);
 

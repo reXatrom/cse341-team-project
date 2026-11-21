@@ -10,7 +10,7 @@ describe('Authentication', () => {
         // Recreate unique username and email indexes.
         await User.createIndexes();
 
-        // Ensure standard roles exist before each authentication test.
+        // Ensure standard roles exist before each test.
         await seedStandardRoles();
     });
 
@@ -100,13 +100,24 @@ describe('Authentication', () => {
             });
 
         expect(loginResponse.status).toBe(302);
-        expect(loginResponse.headers.location).toBe('/');
+        expect(loginResponse.headers.location).toBe('/user/dashboard');
 
-        // A logged-in user should be redirected away from the login page.
-        const pageResponse = await agent.get('/auth/login');
+        // Authenticated users should go to their dashboard.
+        const loginPageResponse = await agent.get('/auth/login');
 
-        expect(pageResponse.status).toBe(302);
-        expect(pageResponse.headers.location).toBe('/');
+        expect(loginPageResponse.status).toBe(302);
+        expect(loginPageResponse.headers.location).toBe('/user/dashboard');
+
+        const registerPageResponse = await agent.get('/auth/register');
+
+        expect(registerPageResponse.status).toBe(302);
+        expect(registerPageResponse.headers.location).toBe('/user/dashboard');
+
+        // The dashboard must be accessible with the session.
+        const dashboardResponse = await agent.get('/user/dashboard');
+
+        expect(dashboardResponse.status).toBe(200);
+        expect(dashboardResponse.text).toContain('Welcome, Test User');
     });
 
     test('POST /auth/logout destroys the user session', async () => {
@@ -129,9 +140,15 @@ describe('Authentication', () => {
         expect(logoutResponse.status).toBe(302);
         expect(logoutResponse.headers.location).toBe('/auth/login');
 
-        // After logout, the login page should be accessible again.
+        // After logout, the login page should be accessible.
         const loginPageResponse = await agent.get('/auth/login');
 
         expect(loginPageResponse.status).toBe(200);
+
+        // The protected dashboard must no longer be accessible.
+        const dashboardResponse = await agent.get('/user/dashboard');
+
+        expect(dashboardResponse.status).toBe(302);
+        expect(dashboardResponse.headers.location).toBe('/auth/login');
     });
 });
