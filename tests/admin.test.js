@@ -73,4 +73,36 @@ describe('Admin Dashboard', () => {
         expect(response.text).toContain('Welcome to the Admin Dashboard');
         expect(response.text).toContain('Dashboard Test User');
     });
+
+    test('denies an ordinary authenticated user access to /admin/users', async () => {
+        const agent = request.agent(app);
+
+        const loginResponse = await createAndLoginUser(
+            agent,
+            'user',
+            'adminusersregular'
+        );
+
+        expect(loginResponse.status).toBe(302);
+
+        const response = await agent.get('/admin/users');
+
+        expect(response.status).toBe(403);
+    });
+
+    test('allows an administrator to access /admin/users', async () => {
+        const agent = request.agent(app);
+
+        const loginResponse = await createAndLoginUser(
+            agent,
+            'admin',
+            'adminusersadmin'
+        );
+
+        expect(loginResponse.status).toBe(302);
+
+        const response = await agent.get('/admin/users');
+
+        expect(response.status).toBe(200);
+    });
 });

@@ -2,6 +2,7 @@
 import app from './app.js';
 import { connectToDb } from './src/db/connect.js';
 import { connectMongoose } from './src/db/mongoose.js';
+import { seedStandardRoles } from './src/models/roles.js';
 
 const NODE_ENV = process.env.NODE_ENV?.toLowerCase() || 'development';
 const PORT = process.env.PORT || 3000;
@@ -9,6 +10,11 @@ const PORT = process.env.PORT || 3000;
 // Connect to MongoDB before accepting requests.
 await connectToDb();
 await connectMongoose();
+
+// Create standard user and admin roles if they do not exist.
+await seedStandardRoles();
+
+console.log('Standard roles are ready.');
 
 // Start the live-reload WebSocket server in development mode.
 if (NODE_ENV.includes('dev')) {

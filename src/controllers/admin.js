@@ -4,3 +4,11 @@ export function adminDashboard(req, res) {
         title: 'Admin Dashboard'
     });
 }
+
+
+
+export function usersAdminPage(req, res) {
+  return res.render('users/admin', {
+    title: 'User Management'
+  });
+}
