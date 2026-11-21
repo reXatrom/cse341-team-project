@@ -1,30 +1,30 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
+    <title>
+        <%= title %>
+    </title>
     <link rel="stylesheet" href="/css/main.css">
     <script src="/js/main.js"></script>
 
     <% if (NODE_ENV.includes('dev')) { %>
         <script>
-            // Get the current hostname and port from the browser.
             const host = window.location.hostname;
             const currentPort = window.location.port;
+            const wsPort = currentPort ? (parseInt(currentPort, 10) + 1) : 3001;
 
-            // Calculate WebSocket port (current port + 1).
-            const wsPort = currentPort ? (parseInt(currentPort) + 1) : 3001;
-
-            // Create WebSocket connection using dynamic hostname and port.
             const ws = new WebSocket(`ws://${host}:${wsPort}`);
+
             ws.onclose = () => {
                 setTimeout(() => location.reload(), 2000);
             };
         </script>
-    <% } %>
+        <% } %>
 </head>
+
 <body>
     <header class="content-grid">
         <div class="content">
@@ -34,8 +34,9 @@
                 </a>
             </div>
 
-            <nav>
+            <nav aria-label="Main navigation">
                 <input id="mobile-menu-toggle" type="checkbox">
+
                 <label for="mobile-menu-toggle">
                     <span></span>
                     <span></span>
@@ -52,24 +53,28 @@
                             <span>Welcome, <%= currentUser.displayName %></span>
                         </li>
 
-                        <% if (currentUser.role === 'admin') { %>
+                        <% if (currentUser.role==='admin' ) { %>
                             <li>
                                 <a href="/admin/dashboard">Admin Dashboard</a>
                             </li>
-                        <% } %>
+                            <% } else if (currentUser.role==='user' ) { %>
+                                <li>
+                                    <a href="/user/dashboard">My Dashboard</a>
+                                </li>
+                                <% } %>
 
-                        <li>
-                            <form method="POST" action="/auth/logout">
-                                <button type="submit">Log Out</button>
-                            </form>
-                        </li>
-                    <% } else { %>
-                        <li><a href="/auth/login">Sign In</a></li>
-                        <li><a href="/auth/register">Register</a></li>
-                    <% } %>
+                                    <li>
+                                        <form method="POST" action="/auth/logout">
+                                            <button type="submit">Log Out</button>
+                                        </form>
+                                    </li>
+                                    <% } else { %>
+                                        <li><a href="/auth/login">Sign In</a></li>
+                                        <li><a href="/auth/register">Register</a></li>
+                                        <% } %>
 
-                    <li><a href="/404">404</a></li>
-                    <li><a href="/500">500</a></li>
+                                            <li><a href="/404">404</a></li>
+                                            <li><a href="/500">500</a></li>
                 </ul>
             </nav>
         </div>

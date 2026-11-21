@@ -6,8 +6,15 @@ import { trainsApi, trainsPage } from './trains.js';
 import { homePage, aboutPage, testErrorPage } from './index.js';
 import schedulesRouter from './schedules.js';
 import authRouter from './auth.js';
-import { requirePageRole } from '../middleware/auth.js';
+import {
+    requireApiRole,
+    requirePageRole
+} from '../middleware/auth.js';
 import { adminDashboard } from '../controllers/admin.js';
+import {
+    userDashboard,
+    getMyBookings
+} from '../controllers/user-dashboard.js';
 
 const router = Router();
 
@@ -25,6 +32,20 @@ router.get(
     '/admin/dashboard',
     requirePageRole('admin'),
     adminDashboard
+);
+
+// Protected User Dashboard
+router.get(
+    '/user/dashboard',
+    requirePageRole('user'),
+    userDashboard
+);
+
+// Authenticated user booking API
+router.get(
+    '/api/users/me/bookings',
+    requireApiRole('user'),
+    getMyBookings
 );
 
 // Trains page
