@@ -42,9 +42,14 @@ const hookTrainsCatalog = () => {
     const templateEl = document.getElementById('train-card-template');
     const loadingEl = document.getElementById('trains-loading');
     const errorEl = document.getElementById('trains-error');
+
     const previousButton = document.getElementById('trains-previous');
     const nextButton = document.getElementById('trains-next');
     const pageInfo = document.getElementById('trains-page-info');
+    const resultCount = document.getElementById('trains-result-count');
+
+    const filterForm = document.getElementById('trains-filter-form');
+    const resetButton = document.getElementById('trains-reset');
 
     if (!listEl || !templateEl) {
         return;
@@ -52,8 +57,35 @@ const hookTrainsCatalog = () => {
 
     let currentPage = 1;
     const pageLimit = 10;
+    let requestController = null;
+
+    const getFilters = () => ({
+        search: document.getElementById('trains-search')?.value.trim() || '',
+        operator: document.getElementById('trains-operator')?.value || '',
+        type: document.getElementById('trains-type')?.value || '',
+        powerSource: document.getElementById('trains-power')?.value || ''
+    });
 
     const loadTrains = async (page) => {
+        if (requestController) {
+            requestController.abort();
+        }
+
+        requestController = new AbortController();
+
+        const params = new URLSearchParams({
+            page: String(page),
+            limit: String(pageLimit)
+        });
+
+        const filters = getFilters();
+
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value) {
+                params.set(key, value);
+            }
+        });
+
         if (loadingEl) {
             loadingEl.hidden = false;
         }
@@ -72,7 +104,8 @@ const hookTrainsCatalog = () => {
 
         try {
             const response = await fetch(
-                `/api/trains?page=${page}&limit=${pageLimit}`
+                `/api/trains?${params.toString()}`,
+                { signal: requestController.signal }
             );
 
             if (!response.ok) {
@@ -96,12 +129,14 @@ const hookTrainsCatalog = () => {
                     '[data-field="image"]'
                 );
 
-                if (train.imageUrl) {
-                    imageEl.src = train.imageUrl;
-                    imageEl.alt = train.imageAlt ||
-                        `${train.name} train`;
-                } else {
-                    imageEl.remove();
+                if (imageEl) {
+                    if (train.imageUrl) {
+                        imageEl.src = train.imageUrl;
+                        imageEl.alt = train.imageAlt ||
+                            `${train.name} train`;
+                    } else {
+                        imageEl.remove();
+                    }
                 }
 
                 const setField = (field, value) => {
@@ -137,12 +172,16 @@ const hookTrainsCatalog = () => {
             });
 
             listEl.replaceChildren(fragment);
-
             currentPage = pagination.page;
+
+            if (resultCount) {
+                resultCount.textContent =
+                    `${pagination.totalItems} matching train(s)`;
+            }
 
             if (pageInfo) {
                 pageInfo.textContent = pagination.totalItems === 0
-                    ? 'No trains available'
+                    ? 'No matching trains found'
                     : `Page ${pagination.page} of ${pagination.totalPages}`;
             }
 
@@ -159,6 +198,10 @@ const hookTrainsCatalog = () => {
                 loadingEl.hidden = true;
             }
         } catch (error) {
+            if (error.name === 'AbortError') {
+                return;
+            }
+
             console.error('Train loading error:', error);
 
             if (loadingEl) {
@@ -172,6 +215,23 @@ const hookTrainsCatalog = () => {
             }
         }
     };
+
+    if (filterForm) {
+        filterForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            loadTrains(1);
+        });
+    }
+
+    if (resetButton) {
+        resetButton.addEventListener('click', () => {
+            if (filterForm) {
+                filterForm.reset();
+            }
+
+            loadTrains(1);
+        });
+    }
 
     if (previousButton) {
         previousButton.addEventListener('click', () => {
