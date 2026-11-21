@@ -45,3 +45,59 @@ export async function getUserById(id) {
 export async function verifyPassword(password, passwordHash) {
   return bcrypt.compare(password, passwordHash);
 }
+
+
+
+// Get all users without exposing their password hashes.
+export async function getAllUsers() {
+  return User.find({})
+    .select('-passwordHash')
+    .populate('role', 'name')
+    .lean();
+}
+
+// Update a user's information.
+export async function updateUser(id, userData) {
+  const updateData = {};
+
+  if (userData.displayName !== undefined) {
+    updateData.displayName = userData.displayName;
+  }
+
+  if (userData.username !== undefined) {
+    updateData.username = userData.username;
+  }
+
+  if (userData.email !== undefined) {
+    updateData.email = userData.email;
+  }
+
+  // Hash a new password before saving it.
+// Validate and hash a new password before saving it.
+if (userData.password !== undefined && userData.password !== '') {
+  if (typeof userData.password !== 'string' || userData.password.length < 8) {
+    throw new Error('Password must be at least 8 characters long.');
+  }
+
+  updateData.passwordHash = await bcrypt.hash(userData.password, 12);
+}
+
+  const user = await User.findByIdAndUpdate(
+    id,
+    { $set: updateData },
+    { returnDocument: 'after', runValidators: true }
+  )
+    .select('-passwordHash')
+    .populate('role', 'name')
+    .lean();
+
+  return user;
+}
+
+// Delete a user by their database ID.
+export async function deleteUser(id) {
+  return User.findByIdAndDelete(id)
+    .select('-passwordHash')
+    .populate('role', 'name')
+    .lean();
+}
