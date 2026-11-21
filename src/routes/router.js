@@ -7,8 +7,7 @@ import { homePage, aboutPage, testErrorPage } from './index.js';
 import schedulesRouter from './schedules.js';
 import authRouter from './auth.js';
 import {
-  requirePageRole,
-  requirePageLogin
+  requirePageRole
 } from '../middleware/auth.js';
 
 import {
@@ -36,7 +35,11 @@ router.get(
 );
 
 
-router.get('/admin/users', requirePageLogin(), usersAdminPage);
+router.get(
+  '/admin/users',
+  requirePageRole('admin'),
+  usersAdminPage
+);
 
 // Trains page
 router.get('/trains', trainsPage);

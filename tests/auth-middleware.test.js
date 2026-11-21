@@ -1,5 +1,11 @@
 
-import { describe, expect, test, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+
+vi.mock('../src/models/users.js', () => ({
+    getUserById: vi.fn()
+}));
+
+import { getUserById } from '../src/models/users.js';
 
 import {
     requireApiLogin,
@@ -9,7 +15,13 @@ import {
 } from '../src/middleware/auth.js';
 
 describe('Authentication Middleware', () => {
-    test('requireApiLogin returns 401 when the user is signed out', () => {
+    beforeEach(() => {
+        getUserById.mockResolvedValue({
+            _id: '507f1f77bcf86cd799439011'
+        });
+    });
+
+    test('requireApiLogin returns 401 when the user is signed out', async () => {
         const req = { session: {} };
         const res = {
             status: vi.fn().mockReturnThis(),
@@ -17,7 +29,7 @@ describe('Authentication Middleware', () => {
         };
         const next = vi.fn();
 
-        requireApiLogin()(req, res, next);
+        await requireApiLogin()(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(401);
         expect(res.json).toHaveBeenCalledWith({
@@ -26,40 +38,48 @@ describe('Authentication Middleware', () => {
         expect(next).not.toHaveBeenCalled();
     });
 
-    test('requireApiLogin allows a signed-in user', () => {
-        const req = { session: { user: { id: '123' } } };
+    test('requireApiLogin allows a signed-in user', async () => {
+        const req = {
+            session: {
+                user: { id: '507f1f77bcf86cd799439011' }
+            }
+        };
         const res = {};
         const next = vi.fn();
 
-        requireApiLogin()(req, res, next);
+        await requireApiLogin()(req, res, next);
 
         expect(next).toHaveBeenCalledOnce();
     });
 
-    test('requirePageLogin redirects a signed-out user', () => {
+    test('requirePageLogin redirects a signed-out user', async () => {
         const req = { session: {} };
         const res = {
             redirect: vi.fn()
         };
         const next = vi.fn();
 
-        requirePageLogin()(req, res, next);
+        await requirePageLogin()(req, res, next);
 
         expect(res.redirect).toHaveBeenCalledWith('/auth/login');
         expect(next).not.toHaveBeenCalled();
     });
 
-    test('requirePageLogin allows a signed-in user', () => {
-        const req = { session: { user: { id: '123' } } };
+    test('requirePageLogin allows a signed-in user', async () => {
+        const req = {
+            session: {
+                user: { id: '507f1f77bcf86cd799439011' }
+            }
+        };
         const res = {};
         const next = vi.fn();
 
-        requirePageLogin()(req, res, next);
+        await requirePageLogin()(req, res, next);
 
         expect(next).toHaveBeenCalledOnce();
     });
 
-    test('requireApiRole returns 401 when the user is signed out', () => {
+    test('requireApiRole returns 401 when the user is signed out', async () => {
         const req = { session: {} };
         const res = {
             status: vi.fn().mockReturnThis(),
@@ -67,15 +87,20 @@ describe('Authentication Middleware', () => {
         };
         const next = vi.fn();
 
-        requireApiRole('admin')(req, res, next);
+        await requireApiRole('admin')(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(401);
         expect(next).not.toHaveBeenCalled();
     });
 
-    test('requireApiRole returns 403 when the user has the wrong role', () => {
+    test('requireApiRole returns 403 when the user has the wrong role', async () => {
         const req = {
-            session: { user: { role: 'user' } }
+            session: {
+                user: {
+                    id: '507f1f77bcf86cd799439011',
+                    role: 'user'
+                }
+            }
         };
         const res = {
             status: vi.fn().mockReturnThis(),
@@ -83,7 +108,7 @@ describe('Authentication Middleware', () => {
         };
         const next = vi.fn();
 
-        requireApiRole('admin')(req, res, next);
+        await requireApiRole('admin')(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(403);
         expect(res.json).toHaveBeenCalledWith({
@@ -92,34 +117,44 @@ describe('Authentication Middleware', () => {
         expect(next).not.toHaveBeenCalled();
     });
 
-    test('requireApiRole allows a user with the required role', () => {
+    test('requireApiRole allows a user with the required role', async () => {
         const req = {
-            session: { user: { role: 'admin' } }
+            session: {
+                user: {
+                    id: '507f1f77bcf86cd799439011',
+                    role: 'admin'
+                }
+            }
         };
         const res = {};
         const next = vi.fn();
 
-        requireApiRole('admin')(req, res, next);
+        await requireApiRole('admin')(req, res, next);
 
         expect(next).toHaveBeenCalledOnce();
     });
 
-    test('requirePageRole redirects a signed-out user', () => {
+    test('requirePageRole redirects a signed-out user', async () => {
         const req = { session: {} };
         const res = {
             redirect: vi.fn()
         };
         const next = vi.fn();
 
-        requirePageRole('admin')(req, res, next);
+        await requirePageRole('admin')(req, res, next);
 
         expect(res.redirect).toHaveBeenCalledWith('/auth/login');
         expect(next).not.toHaveBeenCalled();
     });
 
-    test('requirePageRole renders 403 for a user with the wrong role', () => {
+    test('requirePageRole renders 403 for a user with the wrong role', async () => {
         const req = {
-            session: { user: { role: 'user' } }
+            session: {
+                user: {
+                    id: '507f1f77bcf86cd799439011',
+                    role: 'user'
+                }
+            }
         };
         const res = {
             status: vi.fn().mockReturnThis(),
@@ -127,7 +162,7 @@ describe('Authentication Middleware', () => {
         };
         const next = vi.fn();
 
-        requirePageRole('admin')(req, res, next);
+        await requirePageRole('admin')(req, res, next);
 
         expect(res.status).toHaveBeenCalledWith(403);
         expect(res.render).toHaveBeenCalledWith('errors/403', {
@@ -137,14 +172,19 @@ describe('Authentication Middleware', () => {
         expect(next).not.toHaveBeenCalled();
     });
 
-    test('requirePageRole allows a user with the required role', () => {
+    test('requirePageRole allows a user with the required role', async () => {
         const req = {
-            session: { user: { role: 'admin' } }
+            session: {
+                user: {
+                    id: '507f1f77bcf86cd799439011',
+                    role: 'admin'
+                }
+            }
         };
         const res = {};
         const next = vi.fn();
 
-        requirePageRole('admin')(req, res, next);
+        await requirePageRole('admin')(req, res, next);
 
         expect(next).toHaveBeenCalledOnce();
     });

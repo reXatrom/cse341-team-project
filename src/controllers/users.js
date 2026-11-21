@@ -46,6 +46,18 @@ export async function editUser(req, res) {
       return res.status(403).json({ error: 'You cannot update this user.' });
     }
 
+    // Enforce the same password rule used during registration.
+    if (
+      req.body.password !== undefined &&
+      req.body.password !== '' &&
+      (typeof req.body.password !== 'string' ||
+        req.body.password.length < 8)
+    ) {
+      return res.status(400).json({
+        error: 'Password must be at least 8 characters long.'
+      });
+    }
+
     const updatedUser = await updateUser(id, req.body);
 
     if (!updatedUser) {

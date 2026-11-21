@@ -73,9 +73,14 @@ export async function updateUser(id, userData) {
   }
 
   // Hash a new password before saving it.
-  if (userData.password) {
-    updateData.passwordHash = await bcrypt.hash(userData.password, 12);
+// Validate and hash a new password before saving it.
+if (userData.password !== undefined && userData.password !== '') {
+  if (typeof userData.password !== 'string' || userData.password.length < 8) {
+    throw new Error('Password must be at least 8 characters long.');
   }
+
+  updateData.passwordHash = await bcrypt.hash(userData.password, 12);
+}
 
   const user = await User.findByIdAndUpdate(
     id,
