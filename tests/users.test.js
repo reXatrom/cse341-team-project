@@ -13,13 +13,13 @@ describe('User Management API', () => {
         await seedStandardRoles();
     });
 
-    test('prevents a regular user from changing their own role to admin', async () => {
+    async function createAndLoginUser(username) {
         const role = await getRoleByName('user');
 
         const user = await createUser({
-            displayName: 'Regular Test User',
-            username: 'regularroletest',
-            email: 'regularroletest@example.com',
+            displayName: 'Test User',
+            username,
+            email: `${username}@example.com`,
             password: 'TestPassword123',
             role: role._id
         });
@@ -29,16 +29,26 @@ describe('User Management API', () => {
         const loginResponse = await agent
             .post('/auth/login')
             .send({
-                identifier: 'regularroletest',
+                identifier: username,
                 password: 'TestPassword123'
             });
 
         expect(loginResponse.status).toBe(302);
 
+        return { user, agent, role };
+    }
+
+    test('prevents a regular user from changing their own role to admin', async () => {
+        const { user, agent, role } = await createAndLoginUser(
+            'regularroletest'
+        );
+
+        const adminRole = await getRoleByName('admin');
+
         const response = await agent
             .put(`/api/users/${user._id}`)
             .send({
-                role: (await getRoleByName('admin'))._id
+                role: adminRole._id
             });
 
         expect(response.status).toBe(403);
@@ -49,5 +59,62 @@ describe('User Management API', () => {
         const unchangedUser = await User.findById(user._id);
 
         expect(unchangedUser.role.toString()).toBe(role._id.toString());
+    });
+
+    test('rejects passwords shorter than eight characters', async () => {
+        const { user, agent } = await createAndLoginUser(
+            'shortpasswordtest'
+        );
+
+        const response = await agent
+            .put(`/api/users/${user._id}`)
+            .send({
+                password: 'short'
+            });
+
+        expect(response.status).toBe(400);
+
+        const unchangedUser = await User.findById(user._id);
+
+        expect(unchangedUser).not.toBeNull();
+    });
+
+    test('successfully updates an account', async () => {
+        const { user, agent } = await createAndLoginUser(
+            'successfulupdatetest'
+        );
+
+        const response = await agent
+            .put(`/api/users/${user._id}`)
+            .send({
+                displayName: 'Updated Test User',
+                email: 'updateduser@example.com'
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User updated successfully.');
+
+        const updatedUser = await User.findById(user._id);
+
+        expect(updatedUser.displayName).toBe('Updated Test User');
+        expect(updatedUser.email).toBe('updateduser@example.com');
+    });
+
+    test('successfully deletes an account', async () => {
+        const { user, agent } = await createAndLoginUser(
+            'successfuldeletetest'
+        );
+
+        const response = await agent.delete(
+            `/api/users/${user._id}`
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.message).toBe('User deleted successfully.');
+        expect(response.body.redirect).toBe('/auth/login');
+
+        const deletedUser = await User.findById(user._id);
+
+        expect(deletedUser).toBeNull();
     });
 });
