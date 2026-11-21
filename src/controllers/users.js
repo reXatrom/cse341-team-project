@@ -34,6 +34,7 @@ export async function getUsers(req, res) {
 export async function editUser(req, res) {
   try {
     const { id } = req.params;
+    const body = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: 'Invalid user ID.' });
@@ -43,22 +44,95 @@ export async function editUser(req, res) {
     const isOwnAccount = req.session.user.id === id;
 
     if (!isAdmin && !isOwnAccount) {
-      return res.status(403).json({ error: 'You cannot update this user.' });
-    }
-
-    // Enforce the same password rule used during registration.
-    if (
-      req.body.password !== undefined &&
-      req.body.password !== '' &&
-      (typeof req.body.password !== 'string' ||
-        req.body.password.length < 8)
-    ) {
-      return res.status(400).json({
-        error: 'Password must be at least 8 characters long.'
+      return res.status(403).json({
+        error: 'You cannot update this user.'
       });
     }
 
-    const updatedUser = await updateUser(id, req.body);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return res.status(400).json({
+        error: 'A valid update object is required.'
+      });
+    }
+
+    // Regular users must never be able to change their own role.
+    if (Object.hasOwn(body, 'role') && !isAdmin) {
+      return res.status(403).json({
+        error: 'You cannot change your account role.'
+      });
+    }
+
+    // Only these fields can be updated through this endpoint.
+    const allowedFields = [
+      'displayName',
+      'username',
+      'email',
+      'password'
+    ];
+
+    const invalidFields = Object.keys(body).filter(
+      field => !allowedFields.includes(field)
+    );
+
+    if (invalidFields.length > 0) {
+      return res.status(400).json({
+        error: `Unsupported update field: ${invalidFields.join(', ')}.`
+      });
+    }
+
+    if (Object.keys(body).length === 0) {
+      return res.status(400).json({
+        error: 'Provide at least one field to update.'
+      });
+    }
+
+    if (body.displayName !== undefined) {
+      if (
+        typeof body.displayName !== 'string' ||
+        body.displayName.trim().length === 0 ||
+        body.displayName.trim().length > 100
+      ) {
+        return res.status(400).json({
+          error: 'Display name must be between 1 and 100 characters.'
+        });
+      }
+    }
+
+    if (body.username !== undefined) {
+      if (
+        typeof body.username !== 'string' ||
+        body.username.trim().length < 3 ||
+        body.username.trim().length > 30
+      ) {
+        return res.status(400).json({
+          error: 'Username must be between 3 and 30 characters.'
+        });
+      }
+    }
+
+    if (body.email !== undefined) {
+      if (
+        typeof body.email !== 'string' ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim())
+      ) {
+        return res.status(400).json({
+          error: 'Please provide a valid email address.'
+        });
+      }
+    }
+
+    if (body.password !== undefined && body.password !== '') {
+      if (
+        typeof body.password !== 'string' ||
+        body.password.length < 8
+      ) {
+        return res.status(400).json({
+          error: 'Password must be at least 8 characters long.'
+        });
+      }
+    }
+
+    const updatedUser = await updateUser(id, body);
 
     if (!updatedUser) {
       return res.status(404).json({ error: 'User not found.' });
@@ -77,11 +151,16 @@ export async function editUser(req, res) {
       });
     }
 
-    if (error.name === 'ValidationError' || error.name === 'CastError') {
+    if (
+      error.name === 'ValidationError' ||
+      error.name === 'CastError'
+    ) {
       return res.status(400).json({ error: error.message });
     }
 
-    return res.status(500).json({ error: 'Failed to update user.' });
+    return res.status(500).json({
+      error: 'Failed to update user.'
+    });
   }
 }
 
@@ -99,7 +178,9 @@ export async function removeUser(req, res) {
     const isOwnAccount = req.session.user.id === id;
 
     if (!isAdmin && !isOwnAccount) {
-      return res.status(403).json({ error: 'You cannot delete this user.' });
+      return res.status(403).json({
+        error: 'You cannot delete this user.'
+      });
     }
 
     const deletedUser = await deleteUser(id);
@@ -130,6 +211,8 @@ export async function removeUser(req, res) {
     });
   } catch (error) {
     console.error('Error deleting user:', error);
-    return res.status(500).json({ error: 'Failed to delete user.' });
+    return res.status(500).json({
+      error: 'Failed to delete user.'
+    });
   }
 }

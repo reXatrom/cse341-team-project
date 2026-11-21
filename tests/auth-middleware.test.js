@@ -16,6 +16,8 @@ import {
 
 describe('Authentication Middleware', () => {
     beforeEach(() => {
+        vi.clearAllMocks();
+
         getUserById.mockResolvedValue({
             _id: '507f1f77bcf86cd799439011'
         });
@@ -50,6 +52,29 @@ describe('Authentication Middleware', () => {
         await requireApiLogin()(req, res, next);
 
         expect(next).toHaveBeenCalledOnce();
+    });
+
+    test('requireApiLogin rejects a deleted user with an existing session', async () => {
+        getUserById.mockResolvedValue(null);
+
+        const req = {
+            session: {
+                user: { id: '507f1f77bcf86cd799439011' },
+                destroy: vi.fn(callback => callback())
+            }
+        };
+        const res = {
+            status: vi.fn().mockReturnThis(),
+            json: vi.fn()
+        };
+        const next = vi.fn();
+
+        await requireApiLogin()(req, res, next);
+
+        expect(getUserById).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
+        expect(req.session.destroy).toHaveBeenCalledOnce();
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(next).not.toHaveBeenCalled();
     });
 
     test('requirePageLogin redirects a signed-out user', async () => {
