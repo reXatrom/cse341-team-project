@@ -1,79 +1,58 @@
 <%- include('../partials/header') %>
-<h1><%- title %></h1>
 
-<div id="filters">
-    Search by Region:
-    <select id="region-filter">
-        <option value="all">All Regions</option>
-        <% regions.forEach((region) => { %>
-            <option value="<%= region %>" <%= query.region === region ? 'selected' : '' %>><%= region.charAt(0).toUpperCase() + region.slice(1) %></option>
-        <% }); %>
-    </select>
+    <h1>
+        <%= title %>
+    </h1>
 
-    Search by Season:
-    <select id="season-filter">
-        <option value="all">Any Season</option>
-        <% seasons.forEach((season) => { %>
-            <option value="<%= season %>" <%= query.season === season ? 'selected' : '' %>><%= season.charAt(0).toUpperCase() + season.slice(1) %></option>
-        <% }); %>
-    </select>
-</div>
-
-<div class="routes-grid">
-    <% trips.forEach(trip => { %>
-        <div class="route-card <%= trip.region %>">
-            <div class="route-header">
-                <h2 class="route-name"><%= trip.name %></h2>
-                <span class="route-region"><%= trip.region %></span>
+    <section aria-label="Trip search and filters">
+        <div id="filters">
+            <div>
+                <label for="trip-search">Search Trips:</label>
+                <input type="search" id="trip-search" placeholder="Search by trip name or description">
             </div>
 
-            <div class="station-info">
-                <div class="station">
-                    <div class="station-type">From:</div>
-                    <div class="station-name"><%= trip.startStation %></div>
-                </div>
-                <div class="route-arrow">&#8594;</div>
-                <div class="station">
-                    <div class="station-type">To:</div>
-                    <div class="station-name"><%= trip.endStation %></div>
-                </div>
+            <div>
+                <label for="region-filter">Search by Region:</label>
+                <select id="region-filter">
+                    <option value="">All Regions</option>
+                    <% regions.forEach((region)=> { %>
+                        <option value="<%= region %>">
+                            <%= region.charAt(0).toUpperCase() + region.slice(1) %>
+                        </option>
+                        <% }); %>
+                </select>
             </div>
 
-            <div class="route-details">
-                <div class="detail-item">
-                    <span class="detail-icon">&#128337;</span>
-                    <span><span class="detail-label">Duration:</span> <%= trip.duration %></span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-icon">&#128205;</span>
-                    <span><span class="detail-label">Distance:</span> <%= trip.distance %>km</span>
-                </div>
-                <div class="detail-item">
-                    <span class="season-badge season-<%= trip.bestSeason %>">
-                        Best in <%= trip.bestSeason %>
-                    </span>
-                </div>
-            </div>
-
-            <div class="route-description">
-                <%= trip.description %>
-            </div>
-
-            <div class="highlights">
-                <div class="highlights-list">
-                    <% trip.highlights.forEach(highlight => { %>
-                        <span class="highlight-tag"><%= highlight %></span>
-                    <% }); %>
-                </div>
-            </div>
-                
-            <div class="route-actions">
-                <a href="/trips/<%= trip.id %>" class="view-details-btn">
-                    View Details &amp; Book &#8594;
-                </a>
+            <div>
+                <label for="season-filter">Search by Season:</label>
+                <select id="season-filter">
+                    <option value="">Any Season</option>
+                    <% seasons.forEach((season)=> { %>
+                        <option value="<%= season %>">
+                            <%= season.charAt(0).toUpperCase() + season.slice(1) %>
+                        </option>
+                        <% }); %>
+                </select>
             </div>
         </div>
-    <% }); %>
-</div>
+    </section>
 
-<%- include('../partials/footer') %>
+    <p id="trip-status" role="status" aria-live="polite"></p>
+
+    <div id="trips-container" class="routes-grid"></div>
+
+    <nav id="trip-pagination" aria-label="Trip pagination" hidden>
+        <button id="previous-page" type="button">
+            Previous
+        </button>
+
+        <span id="page-information"></span>
+
+        <button id="next-page" type="button">
+            Next
+        </button>
+    </nav>
+
+    <script src="/js/trips-list.js" defer></script>
+
+    <%- include('../partials/footer') %>
