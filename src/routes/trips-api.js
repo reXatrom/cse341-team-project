@@ -41,6 +41,7 @@ const router = Router();
  *           type: string
  *         region:
  *           type: string
+ *           enum: [central, northern, kansai, hokkaido]
  *         startStation:
  *           type: string
  *         endStation:
@@ -55,6 +56,7 @@ const router = Router();
  *             type: string
  *         bestSeason:
  *           type: string
+ *           enum: [spring, summer, autumn, winter]
  *         operatingMonths:
  *           type: array
  *           items:
@@ -66,7 +68,7 @@ const router = Router();
  *
  * /api/trips:
  *   get:
- *     summary: Retrieve railway trips with pagination
+ *     summary: Retrieve railway trips with pagination and filters
  *     tags: [Trips]
  *     parameters:
  *       - in: query
@@ -86,9 +88,30 @@ const router = Router();
  *           maximum: 50
  *           default: 10
  *         description: Number of trips per page (maximum 50)
+ *       - in: query
+ *         name: region
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [central, northern, kansai, hokkaido]
+ *         description: Filter trips by region
+ *       - in: query
+ *         name: season
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [spring, summer, autumn, winter]
+ *         description: Filter trips by best season
+ *       - in: query
+ *         name: q
+ *         required: false
+ *         schema:
+ *           type: string
+ *           maxLength: 100
+ *         description: Search trip names and descriptions
  *     responses:
  *       200:
- *         description: Paginated list of railway trips
+ *         description: Filtered and paginated list of railway trips
  *         content:
  *           application/json:
  *             schema:
@@ -125,17 +148,17 @@ const router = Router();
  *                     region:
  *                       type: string
  *                       nullable: true
- *                       example: null
+ *                       example: central
  *                     season:
  *                       type: string
  *                       nullable: true
- *                       example: null
+ *                       example: autumn
  *                     q:
  *                       type: string
  *                       nullable: true
- *                       example: null
+ *                       example: gorge
  *       400:
- *         description: Invalid page or limit parameter
+ *         description: Invalid pagination or filter parameters
  *       500:
  *         description: Failed to fetch trips
  *
@@ -249,7 +272,7 @@ const router = Router();
  *         description: Failed to delete trip
  */
 
-// GET /api/trips - Retrieve paginated trips
+// GET /api/trips - Retrieve filtered and paginated trips
 router.get('/', getAllTrips);
 
 // GET /api/trips/:id - Retrieve one trip
