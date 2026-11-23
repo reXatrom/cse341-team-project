@@ -1,0 +1,29 @@
+
+<%- include('../partials/header') %>
+
+<main class="container">
+  <h1>Trips Management</h1>
+  <p>View and manage Kizuna Rail trips.</p>
+
+  <div id="trips-message" role="status" aria-live="polite"></div>
+
+  <section id="trips-admin-container">
+    <p>Loading trips...</p>
+  </section>
+
+  <nav id="trips-pagination" aria-label="Trips pagination">
+    <button type="button" id="previous-page" disabled>
+      Previous
+    </button>
+
+    <span id="page-information">Page 1</span>
+
+    <button type="button" id="next-page" disabled>
+      Next
+    </button>
+  </nav>
+</main>
+
+<script src="/js/trips-admin.js" defer></script>
+
+<%- include('../partials/footer') %>

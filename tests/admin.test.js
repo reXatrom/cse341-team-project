@@ -7,7 +7,7 @@ import User from '../src/models/schemas/users.js';
 import { createUser } from '../src/models/users.js';
 import { getRoleByName, seedStandardRoles } from '../src/models/roles.js';
 
-describe('Admin Dashboard', () => {
+describe('Admin Dashboard and Trips Admin', () => {
     beforeEach(async () => {
         await User.createIndexes();
         await seedStandardRoles();
@@ -104,5 +104,46 @@ describe('Admin Dashboard', () => {
         const response = await agent.get('/admin/users');
 
         expect(response.status).toBe(200);
+    });
+
+    test('redirects signed-out visitors from /trips-admin', async () => {
+        const response = await request(app).get('/trips-admin');
+
+        expect(response.status).toBe(302);
+        expect(response.headers.location).toBe('/auth/login');
+    });
+
+    test('denies an ordinary user access to /trips-admin', async () => {
+        const agent = request.agent(app);
+
+        const loginResponse = await createAndLoginUser(
+            agent,
+            'user',
+            'tripsadminregular'
+        );
+
+        expect(loginResponse.status).toBe(302);
+
+        const response = await agent.get('/trips-admin');
+
+        expect(response.status).toBe(403);
+        expect(response.text).toContain('403 - Access Forbidden');
+    });
+
+    test('allows an administrator to access /trips-admin', async () => {
+        const agent = request.agent(app);
+
+        const loginResponse = await createAndLoginUser(
+            agent,
+            'admin',
+            'tripsadminadmin'
+        );
+
+        expect(loginResponse.status).toBe(302);
+
+        const response = await agent.get('/trips-admin');
+
+        expect(response.status).toBe(200);
+        expect(response.text).toContain('Trips Management');
     });
 });

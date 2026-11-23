@@ -5,10 +5,14 @@ export function adminDashboard(req, res) {
     });
 }
 
-
-
 export function usersAdminPage(req, res) {
-  return res.render('users/admin', {
-    title: 'User Management'
-  });
+    return res.render('users/admin', {
+        title: 'User Management'
+    });
+}
+
+export function tripsAdminPage(req, res) {
+    return res.render('admin/trips-admin', {
+        title: 'Trips Management'
+    });
 }
