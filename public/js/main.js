@@ -3,6 +3,13 @@ const hookRegionSorter = () => {
     const regionSelect = document.getElementById('region-filter');
 
     if (regionSelect) {
+        const params = new URLSearchParams(window.location.search);
+        const selectedRegion = params.get('region');
+
+        if (selectedRegion) {
+            regionSelect.value = selectedRegion;
+        }
+
         regionSelect.addEventListener('change', () => {
             const url = new URL(window.location.href);
             const region = regionSelect.value;
@@ -13,6 +20,7 @@ const hookRegionSorter = () => {
                 url.searchParams.delete('region');
             }
 
+            url.searchParams.delete('page');
             window.location.href = url.toString();
         });
     }
@@ -22,6 +30,13 @@ const hookSeasonSorter = () => {
     const seasonSelect = document.getElementById('season-filter');
 
     if (seasonSelect) {
+        const params = new URLSearchParams(window.location.search);
+        const selectedSeason = params.get('season');
+
+        if (selectedSeason) {
+            seasonSelect.value = selectedSeason;
+        }
+
         seasonSelect.addEventListener('change', () => {
             const url = new URL(window.location.href);
             const season = seasonSelect.value;
@@ -32,6 +47,7 @@ const hookSeasonSorter = () => {
                 url.searchParams.delete('season');
             }
 
+            url.searchParams.delete('page');
             window.location.href = url.toString();
         });
     }
@@ -42,6 +58,7 @@ const hookTrainsCatalog = () => {
     const templateEl = document.getElementById('train-card-template');
     const loadingEl = document.getElementById('trains-loading');
     const errorEl = document.getElementById('trains-error');
+
     const previousButton = document.getElementById('trains-previous');
     const nextButton = document.getElementById('trains-next');
     const pageInfo = document.getElementById('trains-page-info');
@@ -50,10 +67,29 @@ const hookTrainsCatalog = () => {
         return;
     }
 
-    let currentPage = 1;
+    const initialParams = new URLSearchParams(window.location.search);
+    const initialPage = Number(initialParams.get('page'));
+
+    let currentPage = Number.isSafeInteger(initialPage) && initialPage > 0
+        ? initialPage
+        : 1;
+
     const pageLimit = 10;
+    let requestController = null;
 
     const loadTrains = async (page) => {
+        if (requestController) {
+            requestController.abort();
+        }
+
+        requestController = new AbortController();
+
+        // Preserve existing URL filters when requesting another page.
+        const params = new URLSearchParams(window.location.search);
+
+        params.set('page', String(page));
+        params.set('limit', String(pageLimit));
+
         if (loadingEl) {
             loadingEl.hidden = false;
         }
@@ -72,7 +108,8 @@ const hookTrainsCatalog = () => {
 
         try {
             const response = await fetch(
-                `/api/trains?page=${page}&limit=${pageLimit}`
+                `/api/trains?${params.toString()}`,
+                { signal: requestController.signal }
             );
 
             if (!response.ok) {
@@ -83,8 +120,8 @@ const hookTrainsCatalog = () => {
             const trains = payload.trains || [];
             const pagination = payload.pagination;
 
-            if (!pagination) {
-                throw new Error('Pagination data is missing.');
+            if (!Array.isArray(trains) || !pagination) {
+                throw new Error('Invalid pagination response.');
             }
 
             const fragment = document.createDocumentFragment();
@@ -96,12 +133,14 @@ const hookTrainsCatalog = () => {
                     '[data-field="image"]'
                 );
 
-                if (train.imageUrl) {
-                    imageEl.src = train.imageUrl;
-                    imageEl.alt = train.imageAlt ||
-                        `${train.name} train`;
-                } else {
-                    imageEl.remove();
+                if (imageEl) {
+                    if (train.imageUrl) {
+                        imageEl.src = train.imageUrl;
+                        imageEl.alt = train.imageAlt ||
+                            `${train.name} train`;
+                    } else {
+                        imageEl.remove();
+                    }
                 }
 
                 const setField = (field, value) => {
@@ -137,7 +176,6 @@ const hookTrainsCatalog = () => {
             });
 
             listEl.replaceChildren(fragment);
-
             currentPage = pagination.page;
 
             if (pageInfo) {
@@ -159,6 +197,10 @@ const hookTrainsCatalog = () => {
                 loadingEl.hidden = true;
             }
         } catch (error) {
+            if (error.name === 'AbortError') {
+                return;
+            }
+
             console.error('Train loading error:', error);
 
             if (loadingEl) {
@@ -187,7 +229,7 @@ const hookTrainsCatalog = () => {
         });
     }
 
-    loadTrains(1);
+    loadTrains(currentPage);
 };
 
 document.addEventListener('DOMContentLoaded', () => {
