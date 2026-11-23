@@ -95,6 +95,181 @@ describe('Trips API', () => {
         );
     });
 
+    // Region filtering tests
+    test.each([
+        ['central', 2],
+        ['northern', 1],
+        ['kansai', 2],
+        ['hokkaido', 1]
+    ])(
+        'GET /api/trips filters by region: %s',
+        async (region, expectedCount) => {
+            const response = await request(app)
+                .get(`/api/trips?region=${region}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.data).toHaveLength(expectedCount);
+
+            expect(response.body.data.every(
+                (trip) => trip.region === region
+            )).toBe(true);
+
+            expect(response.body.pagination.totalItems).toBe(expectedCount);
+            expect(response.body.filters.region).toBe(region);
+        }
+    );
+
+    // Season filtering tests
+    test.each([
+        ['spring', 1],
+        ['summer', 1],
+        ['autumn', 3],
+        ['winter', 1]
+    ])(
+        'GET /api/trips filters by season: %s',
+        async (season, expectedCount) => {
+            const response = await request(app)
+                .get(`/api/trips?season=${season}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.data).toHaveLength(expectedCount);
+
+            expect(response.body.data.every(
+                (trip) => trip.bestSeason === season
+            )).toBe(true);
+
+            expect(response.body.pagination.totalItems).toBe(expectedCount);
+            expect(response.body.filters.season).toBe(season);
+        }
+    );
+
+    // Keyword search tests
+    test('GET /api/trips searches trip names', async () => {
+        const response = await request(app)
+            .get('/api/trips')
+            .query({ q: 'Alpine Panorama' });
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0].id).toBe('alpine-panorama');
+        expect(response.body.filters.q).toBe('Alpine Panorama');
+    });
+
+    test('GET /api/trips searches trip descriptions', async () => {
+        const response = await request(app)
+            .get('/api/trips')
+            .query({ q: 'cherry blossom' });
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0].id).toBe('sakura-valley');
+    });
+
+    // Combined filtering and pagination tests
+    test('GET /api/trips combines region, season, and keyword filters', async () => {
+        const response = await request(app)
+            .get('/api/trips?region=central&season=autumn&q=gorge');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0].id).toBe('gorge-explorer');
+
+        expect(response.body.pagination).toEqual({
+            page: 1,
+            limit: 10,
+            totalItems: 1,
+            totalPages: 1,
+            hasNextPage: false,
+            hasPreviousPage: false
+        });
+
+        expect(response.body.filters).toEqual({
+            region: 'central',
+            season: 'autumn',
+            q: 'gorge'
+        });
+    });
+
+    test('GET /api/trips applies filters before pagination', async () => {
+        const response = await request(app)
+            .get('/api/trips?region=central&page=2&limit=1');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0].id).toBe('gorge-explorer');
+
+        expect(response.body.pagination).toEqual({
+            page: 2,
+            limit: 1,
+            totalItems: 2,
+            totalPages: 2,
+            hasNextPage: false,
+            hasPreviousPage: true
+        });
+    });
+
+    test('GET /api/trips returns empty results when filters have no matches', async () => {
+        const response = await request(app)
+            .get('/api/trips?region=northern&season=winter');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toEqual([]);
+
+        expect(response.body.pagination.totalItems).toBe(0);
+        expect(response.body.pagination.totalPages).toBe(0);
+
+        expect(response.body.filters).toEqual({
+            region: 'northern',
+            season: 'winter',
+            q: null
+        });
+    });
+
+    // Filter validation tests
+    test.each(['invalid', 'tokyo', ''])(
+        'GET /api/trips rejects invalid region value: %s',
+        async (region) => {
+            const response = await request(app)
+                .get('/api/trips')
+                .query({ region });
+
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty('error');
+        }
+    );
+
+    test.each(['invalid', 'monsoon', ''])(
+        'GET /api/trips rejects invalid season value: %s',
+        async (season) => {
+            const response = await request(app)
+                .get('/api/trips')
+                .query({ season });
+
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty('error');
+        }
+    );
+
+    // Keyword validation tests
+    test('GET /api/trips rejects a non-string keyword query', async () => {
+        const response = await request(app)
+            .get('/api/trips')
+            .query({ q: ['alpine', 'coastal'] });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    test('GET /api/trips rejects a keyword query longer than 100 characters', async () => {
+        const response = await request(app)
+            .get('/api/trips')
+            .query({ q: 'a'.repeat(101) });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    // Existing single-trip and CRUD tests
     test('GET /api/trips/:id returns one trip', async () => {
         const response = await request(app)
             .get('/api/trips/alpine-panorama');

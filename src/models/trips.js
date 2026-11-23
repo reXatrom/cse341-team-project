@@ -11,18 +11,41 @@ export async function getTripById(id) {
   return Trip.findOne({ id }).lean();
 }
 
-// Retrieve a specific page of trips and the total number of trips.
-export async function getPaginatedTrips(page, limit) {
+// Escape special regular-expression characters in user search input.
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Retrieve a filtered page of trips and the total matching trip count.
+export async function getPaginatedTrips(page, limit, filters = {}) {
   const skip = (page - 1) * limit;
+  const query = {};
+
+  if (filters.region) {
+    query.region = filters.region;
+  }
+
+  if (filters.season) {
+    query.bestSeason = filters.season;
+  }
+
+  if (filters.q) {
+    const searchPattern = new RegExp(escapeRegex(filters.q), 'i');
+
+    query.$or = [
+      { name: searchPattern },
+      { description: searchPattern }
+    ];
+  }
 
   const [trips, totalItems] = await Promise.all([
-    Trip.find({})
+    Trip.find(query)
       .sort({ name: 1, _id: 1 })
       .skip(skip)
       .limit(limit)
       .lean(),
 
-    Trip.countDocuments({})
+    Trip.countDocuments(query)
   ]);
 
   return {

@@ -7,6 +7,20 @@ import {
   deleteTrip as removeTrip
 } from '../models/trips.js';
 
+const VALID_REGIONS = [
+  'central',
+  'northern',
+  'kansai',
+  'hokkaido'
+];
+
+const VALID_SEASONS = [
+  'spring',
+  'summer',
+  'autumn',
+  'winter'
+];
+
 // Validate positive integer query parameters.
 function parsePositiveInteger(value, defaultValue) {
   if (value === undefined) {
@@ -25,7 +39,26 @@ function parsePositiveInteger(value, defaultValue) {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
-// GET all trips with pagination.
+// Validate and normalize an optional filter.
+function parseFilter(value, allowedValues) {
+  if (value === undefined) {
+    return { valid: true, value: null };
+  }
+
+  if (typeof value !== 'string') {
+    return { valid: false, value: null };
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (!allowedValues.includes(normalized)) {
+    return { valid: false, value: null };
+  }
+
+  return { valid: true, value: normalized };
+}
+
+// GET all trips with pagination, filtering, and keyword search.
 export async function getAllTrips(req, res) {
   try {
     const page = parsePositiveInteger(req.query.page, 1);
@@ -43,7 +76,61 @@ export async function getAllTrips(req, res) {
       });
     }
 
-    const { trips, totalItems } = await getPaginatedTrips(page, limit);
+    const regionResult = parseFilter(
+      req.query.region,
+      VALID_REGIONS
+    );
+
+    if (!regionResult.valid) {
+      return res.status(400).json({
+        error: 'Invalid region. Use central, northern, kansai, or hokkaido.'
+      });
+    }
+
+    const seasonResult = parseFilter(
+      req.query.season,
+      VALID_SEASONS
+    );
+
+    if (!seasonResult.valid) {
+      return res.status(400).json({
+        error: 'Invalid season. Use spring, summer, autumn, or winter.'
+      });
+    }
+
+    let q = null;
+
+    if (req.query.q !== undefined) {
+      if (
+        typeof req.query.q !== 'string' ||
+        req.query.q.length > 100
+      ) {
+        return res.status(400).json({
+          error: 'Search query must be a string of no more than 100 characters.'
+        });
+      }
+
+      q = req.query.q.trim() || null;
+
+      if (q && q.length > 100) {
+        return res.status(400).json({
+          error: 'Search query must be no more than 100 characters.'
+        });
+      }
+    }
+
+    const filters = {
+      region: regionResult.value,
+      season: seasonResult.value,
+      q
+    };
+
+    const { trips, totalItems } = await getPaginatedTrips(
+      page,
+      limit,
+      filters
+    );
+
     const totalPages = Math.ceil(totalItems / limit);
 
     return res.status(200).json({
@@ -56,11 +143,7 @@ export async function getAllTrips(req, res) {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1
       },
-      filters: {
-        region: null,
-        season: null,
-        q: null
-      }
+      filters
     });
   } catch (error) {
     console.error('Error fetching trips:', error);

@@ -5,6 +5,42 @@
   <h1>Trips Management</h1>
   <p>View and manage Kizuna Rail trips.</p>
 
+  <section class="trips-admin-filters" aria-label="Filter trips">
+    <h2>Search and Filter Trips</h2>
+
+    <div>
+      <label for="region-filter">Region</label>
+      <select id="region-filter">
+        <option value="">All Regions</option>
+        <option value="central">Central</option>
+        <option value="northern">Northern</option>
+        <option value="kansai">Kansai</option>
+        <option value="hokkaido">Hokkaido</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="season-filter">Season</label>
+      <select id="season-filter">
+        <option value="">All Seasons</option>
+        <option value="spring">Spring</option>
+        <option value="summer">Summer</option>
+        <option value="autumn">Autumn</option>
+        <option value="winter">Winter</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="trip-search">Search trips</label>
+      <input
+        type="search"
+        id="trip-search"
+        maxlength="100"
+        placeholder="Search trip names or descriptions"
+      >
+    </div>
+  </section>
+
   <div id="trips-message" role="status" aria-live="polite"></div>
 
   <section id="trips-admin-container">
