@@ -18,6 +18,9 @@ const state = {
   q: ''
 };
 
+let searchDebounceTimer = null;
+let activeRequestController = null;
+
 // Display a message to the administrator.
 function showMessage(message, isError = false) {
   messageContainer.textContent = message;
@@ -82,6 +85,13 @@ function updatePagination(pagination) {
 
 // Retrieve and display trips from the API.
 async function loadTrips() {
+  if (activeRequestController) {
+    activeRequestController.abort();
+  }
+
+  const requestController = new AbortController();
+  activeRequestController = requestController;
+
   tripsContainer.replaceChildren();
   showMessage('Loading trips...');
 
@@ -106,7 +116,11 @@ async function loadTrips() {
   }
 
   try {
-    const response = await fetch(`/api/trips?${params.toString()}`);
+    const response = await fetch(
+      `/api/trips?${params.toString()}`,
+      { signal: requestController.signal }
+    );
+
     const result = await response.json();
 
     if (!response.ok) {
@@ -132,6 +146,10 @@ async function loadTrips() {
       `Showing ${result.data.length} of ${result.pagination.totalItems} matching trips.`
     );
   } catch (error) {
+    if (error.name === 'AbortError') {
+      return;
+    }
+
     console.error('Error loading trips:', error);
     showMessage(error.message, true);
 
@@ -142,17 +160,50 @@ async function loadTrips() {
     );
 
     pageInformation.textContent = 'Page unavailable';
+  } finally {
+    if (activeRequestController === requestController) {
+      activeRequestController = null;
+    }
   }
 }
 
-// Apply filters and return to the first page.
-function applyFilters() {
+// Cancel any pending keyword search.
+function cancelPendingSearch() {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = null;
+}
+
+// Read the current filter values.
+function updateFilterState() {
   state.region = regionFilter.value;
   state.season = seasonFilter.value;
   state.q = tripSearch.value.trim();
   state.page = 1;
+}
 
+// Apply region and season filters immediately.
+function applyFilters() {
+  cancelPendingSearch();
+  updateFilterState();
   loadTrips();
+}
+
+// Search trip names and descriptions with debounce.
+function handleSearchInput() {
+  updateFilterState();
+  cancelPendingSearch();
+
+  // Cancel an older request as soon as the user types.
+  if (activeRequestController) {
+    activeRequestController.abort();
+  }
+
+  showMessage('Waiting for search...');
+
+  searchDebounceTimer = setTimeout(() => {
+    searchDebounceTimer = null;
+    loadTrips();
+  }, 300);
 }
 
 // Apply the selected region.
@@ -161,12 +212,13 @@ regionFilter.addEventListener('change', applyFilters);
 // Apply the selected season.
 seasonFilter.addEventListener('change', applyFilters);
 
-// Search trip names and descriptions.
-tripSearch.addEventListener('input', applyFilters);
+// Search after the user pauses typing.
+tripSearch.addEventListener('input', handleSearchInput);
 
 // Load the previous page.
 previousButton.addEventListener('click', () => {
   if (state.page > 1) {
+    cancelPendingSearch();
     state.page -= 1;
     loadTrips();
   }
@@ -175,6 +227,7 @@ previousButton.addEventListener('click', () => {
 // Load the next page.
 nextButton.addEventListener('click', () => {
   if (state.page < state.totalPages) {
+    cancelPendingSearch();
     state.page += 1;
     loadTrips();
   }
