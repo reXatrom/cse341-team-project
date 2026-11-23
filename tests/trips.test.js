@@ -45,6 +45,23 @@ describe('Trips API', () => {
         });
     });
 
+    test('GET /api/trips returns an empty page when the requested page exceeds the available pages', async () => {
+        const response = await request(app)
+            .get('/api/trips?page=4&limit=2');
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toEqual([]);
+
+        expect(response.body.pagination).toEqual({
+            page: 4,
+            limit: 2,
+            totalItems: 6,
+            totalPages: 3,
+            hasNextPage: false,
+            hasPreviousPage: true
+        });
+    });
+
     test.each(['0', '-1', '1.5', 'abc'])(
         'GET /api/trips rejects invalid page value: %s',
         async (page) => {
