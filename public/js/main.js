@@ -95,13 +95,14 @@ const hookTrainsCatalog = () => {
 
         requestController = new AbortController();
 
-        // Preserve existing URL parameters, including region and season.
+        // Preserve existing URL parameters.
         const params = new URLSearchParams(window.location.search);
 
+        // Update pagination parameters.
         params.set('page', String(page));
         params.set('limit', String(pageLimit));
 
-        // Include the current catalogue filter values.
+        // Apply Trains-specific search and filters.
         const filters = getFilters();
 
         Object.entries(filters).forEach(([key, value]) => {
@@ -178,18 +179,21 @@ const hookTrainsCatalog = () => {
                 setField('name', train.name);
                 setField('operator', train.operator);
                 setField('type', train.type);
+
                 setField(
                     'speed',
                     train.maxSpeedKmh == null
                         ? ''
                         : `${train.maxSpeedKmh} km/h`
                 );
+
                 setField(
                     'seats',
                     train.capacity == null
                         ? ''
                         : `${train.capacity} seats`
                 );
+
                 setField('power', train.powerSource);
                 setField('description', train.description);
                 setField('best-for', train.bestFor);
@@ -198,7 +202,6 @@ const hookTrainsCatalog = () => {
             });
 
             listEl.replaceChildren(fragment);
-
             currentPage = pagination.page;
 
             if (resultCount) {
