@@ -3,6 +3,13 @@ const hookRegionSorter = () => {
     const regionSelect = document.getElementById('region-filter');
 
     if (regionSelect) {
+        const params = new URLSearchParams(window.location.search);
+        const selectedRegion = params.get('region');
+
+        if (selectedRegion) {
+            regionSelect.value = selectedRegion;
+        }
+
         regionSelect.addEventListener('change', () => {
             const url = new URL(window.location.href);
             const region = regionSelect.value;
@@ -13,6 +20,7 @@ const hookRegionSorter = () => {
                 url.searchParams.delete('region');
             }
 
+            url.searchParams.delete('page');
             window.location.href = url.toString();
         });
     }
@@ -22,6 +30,13 @@ const hookSeasonSorter = () => {
     const seasonSelect = document.getElementById('season-filter');
 
     if (seasonSelect) {
+        const params = new URLSearchParams(window.location.search);
+        const selectedSeason = params.get('season');
+
+        if (selectedSeason) {
+            seasonSelect.value = selectedSeason;
+        }
+
         seasonSelect.addEventListener('change', () => {
             const url = new URL(window.location.href);
             const season = seasonSelect.value;
@@ -32,6 +47,7 @@ const hookSeasonSorter = () => {
                 url.searchParams.delete('season');
             }
 
+            url.searchParams.delete('page');
             window.location.href = url.toString();
         });
     }
@@ -55,7 +71,13 @@ const hookTrainsCatalog = () => {
         return;
     }
 
-    let currentPage = 1;
+    const initialParams = new URLSearchParams(window.location.search);
+    const initialPage = Number(initialParams.get('page'));
+
+    let currentPage = Number.isSafeInteger(initialPage) && initialPage > 0
+        ? initialPage
+        : 1;
+
     const pageLimit = 10;
     let requestController = null;
 
@@ -73,16 +95,20 @@ const hookTrainsCatalog = () => {
 
         requestController = new AbortController();
 
-        const params = new URLSearchParams({
-            page: String(page),
-            limit: String(pageLimit)
-        });
+        // Preserve existing URL parameters, including region and season.
+        const params = new URLSearchParams(window.location.search);
 
+        params.set('page', String(page));
+        params.set('limit', String(pageLimit));
+
+        // Include the current catalogue filter values.
         const filters = getFilters();
 
         Object.entries(filters).forEach(([key, value]) => {
-            if (value) {
+            if (value && value !== 'all') {
                 params.set(key, value);
+            } else {
+                params.delete(key);
             }
         });
 
@@ -116,8 +142,8 @@ const hookTrainsCatalog = () => {
             const trains = payload.trains || [];
             const pagination = payload.pagination;
 
-            if (!pagination) {
-                throw new Error('Pagination data is missing.');
+            if (!Array.isArray(trains) || !pagination) {
+                throw new Error('Invalid pagination response.');
             }
 
             const fragment = document.createDocumentFragment();
@@ -172,6 +198,7 @@ const hookTrainsCatalog = () => {
             });
 
             listEl.replaceChildren(fragment);
+
             currentPage = pagination.page;
 
             if (resultCount) {
@@ -247,7 +274,7 @@ const hookTrainsCatalog = () => {
         });
     }
 
-    loadTrains(1);
+    loadTrains(currentPage);
 };
 
 document.addEventListener('DOMContentLoaded', () => {
