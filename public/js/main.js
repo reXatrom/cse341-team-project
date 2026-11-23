@@ -81,11 +81,31 @@ const hookTrainsCatalog = () => {
     const pageLimit = 10;
     let requestController = null;
 
+    // Restore Trains search and filters from the URL.
+    const filterControls = {
+        search: document.getElementById('trains-search'),
+        operator: document.getElementById('trains-operator'),
+        type: document.getElementById('trains-type'),
+        powerSource: document.getElementById('trains-power')
+    };
+
+    Object.entries(filterControls).forEach(([key, control]) => {
+        if (!control) {
+            return;
+        }
+
+        const value = initialParams.get(key);
+
+        if (value !== null) {
+            control.value = value;
+        }
+    });
+
     const getFilters = () => ({
-        search: document.getElementById('trains-search')?.value.trim() || '',
-        operator: document.getElementById('trains-operator')?.value || '',
-        type: document.getElementById('trains-type')?.value || '',
-        powerSource: document.getElementById('trains-power')?.value || ''
+        search: filterControls.search?.value.trim() || '',
+        operator: filterControls.operator?.value || '',
+        type: filterControls.type?.value || '',
+        powerSource: filterControls.powerSource?.value || ''
     });
 
     const loadTrains = async (page) => {
@@ -98,11 +118,10 @@ const hookTrainsCatalog = () => {
         // Preserve existing URL parameters.
         const params = new URLSearchParams(window.location.search);
 
-        // Update pagination parameters.
         params.set('page', String(page));
         params.set('limit', String(pageLimit));
 
-        // Apply Trains-specific search and filters.
+        // Include current Trains-specific filters.
         const filters = getFilters();
 
         Object.entries(filters).forEach(([key, value]) => {
@@ -152,9 +171,7 @@ const hookTrainsCatalog = () => {
             trains.forEach((train) => {
                 const card = templateEl.content.cloneNode(true);
 
-                const imageEl = card.querySelector(
-                    '[data-field="image"]'
-                );
+                const imageEl = card.querySelector('[data-field="image"]');
 
                 if (imageEl) {
                     if (train.imageUrl) {
