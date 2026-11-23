@@ -9,6 +9,57 @@
     </section>
 
     <section class="trains-catalog">
+        <form id="trains-filter-form" aria-label="Search and filter trains"
+            style="display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:24px 0;">
+
+            <div>
+                <label for="trains-search">Search by name</label>
+                <input type="search" id="trains-search" name="search" placeholder="Enter train name" maxlength="100">
+            </div>
+
+            <div>
+                <label for="trains-operator">Operator</label>
+                <select id="trains-operator" name="operator">
+                    <option value="">All operators</option>
+                    <option value="JR East">JR East</option>
+                    <option value="JR West">JR West</option>
+                    <option value="JR Hokkaido">JR Hokkaido</option>
+                    <option value="Heritage Partnership">
+                        Heritage Partnership
+                    </option>
+                </select>
+            </div>
+
+            <div>
+                <label for="trains-type">Train type</label>
+                <select id="trains-type" name="type">
+                    <option value="">All types</option>
+                    <option value="Limited Express">Limited Express</option>
+                    <option value="Diesel Limited Express">
+                        Diesel Limited Express
+                    </option>
+                    <option value="Steam Excursion">Steam Excursion</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="trains-power">Power source</label>
+                <select id="trains-power" name="powerSource">
+                    <option value="">All power sources</option>
+                    <option value="Electric">Electric</option>
+                    <option value="Diesel">Diesel</option>
+                    <option value="Steam">Steam</option>
+                </select>
+            </div>
+
+            <button type="submit">Search Trains</button>
+            <button type="button" id="trains-reset">
+                Reset Filters
+            </button>
+        </form>
+
+        <p id="trains-result-count" aria-live="polite"></p>
+
         <div class="trains-state" id="trains-loading">
             Loading trains...
         </div>

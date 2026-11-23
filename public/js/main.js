@@ -62,6 +62,10 @@ const hookTrainsCatalog = () => {
     const previousButton = document.getElementById('trains-previous');
     const nextButton = document.getElementById('trains-next');
     const pageInfo = document.getElementById('trains-page-info');
+    const resultCount = document.getElementById('trains-result-count');
+
+    const filterForm = document.getElementById('trains-filter-form');
+    const resetButton = document.getElementById('trains-reset');
 
     if (!listEl || !templateEl) {
         return;
@@ -77,6 +81,33 @@ const hookTrainsCatalog = () => {
     const pageLimit = 10;
     let requestController = null;
 
+    // Restore Trains search and filters from the URL.
+    const filterControls = {
+        search: document.getElementById('trains-search'),
+        operator: document.getElementById('trains-operator'),
+        type: document.getElementById('trains-type'),
+        powerSource: document.getElementById('trains-power')
+    };
+
+    Object.entries(filterControls).forEach(([key, control]) => {
+        if (!control) {
+            return;
+        }
+
+        const value = initialParams.get(key);
+
+        if (value !== null) {
+            control.value = value;
+        }
+    });
+
+    const getFilters = () => ({
+        search: filterControls.search?.value.trim() || '',
+        operator: filterControls.operator?.value || '',
+        type: filterControls.type?.value || '',
+        powerSource: filterControls.powerSource?.value || ''
+    });
+
     const loadTrains = async (page) => {
         if (requestController) {
             requestController.abort();
@@ -84,11 +115,22 @@ const hookTrainsCatalog = () => {
 
         requestController = new AbortController();
 
-        // Preserve existing URL filters when requesting another page.
+        // Preserve existing URL parameters.
         const params = new URLSearchParams(window.location.search);
 
         params.set('page', String(page));
         params.set('limit', String(pageLimit));
+
+        // Include current Trains-specific filters.
+        const filters = getFilters();
+
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value && value !== 'all') {
+                params.set(key, value);
+            } else {
+                params.delete(key);
+            }
+        });
 
         if (loadingEl) {
             loadingEl.hidden = false;
@@ -129,9 +171,7 @@ const hookTrainsCatalog = () => {
             trains.forEach((train) => {
                 const card = templateEl.content.cloneNode(true);
 
-                const imageEl = card.querySelector(
-                    '[data-field="image"]'
-                );
+                const imageEl = card.querySelector('[data-field="image"]');
 
                 if (imageEl) {
                     if (train.imageUrl) {
@@ -156,18 +196,21 @@ const hookTrainsCatalog = () => {
                 setField('name', train.name);
                 setField('operator', train.operator);
                 setField('type', train.type);
+
                 setField(
                     'speed',
                     train.maxSpeedKmh == null
                         ? ''
                         : `${train.maxSpeedKmh} km/h`
                 );
+
                 setField(
                     'seats',
                     train.capacity == null
                         ? ''
                         : `${train.capacity} seats`
                 );
+
                 setField('power', train.powerSource);
                 setField('description', train.description);
                 setField('best-for', train.bestFor);
@@ -178,9 +221,14 @@ const hookTrainsCatalog = () => {
             listEl.replaceChildren(fragment);
             currentPage = pagination.page;
 
+            if (resultCount) {
+                resultCount.textContent =
+                    `${pagination.totalItems} matching train(s)`;
+            }
+
             if (pageInfo) {
                 pageInfo.textContent = pagination.totalItems === 0
-                    ? 'No trains available'
+                    ? 'No matching trains found'
                     : `Page ${pagination.page} of ${pagination.totalPages}`;
             }
 
@@ -214,6 +262,23 @@ const hookTrainsCatalog = () => {
             }
         }
     };
+
+    if (filterForm) {
+        filterForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            loadTrains(1);
+        });
+    }
+
+    if (resetButton) {
+        resetButton.addEventListener('click', () => {
+            if (filterForm) {
+                filterForm.reset();
+            }
+
+            loadTrains(1);
+        });
+    }
 
     if (previousButton) {
         previousButton.addEventListener('click', () => {

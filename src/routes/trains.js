@@ -5,14 +5,24 @@ const trainsPage = (req, res) => {
     return res.render('trains', { title: 'Trains' });
 };
 
+const validInteger = (value) =>
+    typeof value === 'string' &&
+    /^[1-9]\d*$/.test(value) &&
+    Number.isSafeInteger(Number(value));
+
+const escapeRegex = (value) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const filterFields = ['search', 'operator', 'type', 'powerSource'];
+
 /**
  * @openapi
  * /api/trains:
  *   get:
  *     tags:
  *       - Trains
- *     summary: Get paginated trains
- *     description: Returns trains with pagination metadata.
+ *     summary: Search, filter, and paginate trains
+ *     description: Returns matching trains with pagination metadata.
  *     parameters:
  *       - in: query
  *         name: page
@@ -29,9 +39,29 @@ const trainsPage = (req, res) => {
  *           maximum: 100
  *           default: 10
  *         description: Number of trains per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Case-insensitive partial train name search
+ *       - in: query
+ *         name: operator
+ *         schema:
+ *           type: string
+ *         description: Case-insensitive operator filter
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Case-insensitive train type filter
+ *       - in: query
+ *         name: powerSource
+ *         schema:
+ *           type: string
+ *         description: Case-insensitive power source filter
  *     responses:
  *       200:
- *         description: Paginated train records
+ *         description: Matching train records and pagination metadata
  *         content:
  *           application/json:
  *             schema:
@@ -56,8 +86,19 @@ const trainsPage = (req, res) => {
  *                       type: boolean
  *                     hasPreviousPage:
  *                       type: boolean
+ *                 filters:
+ *                   type: object
+ *                   properties:
+ *                     search:
+ *                       type: string
+ *                     operator:
+ *                       type: string
+ *                     type:
+ *                       type: string
+ *                     powerSource:
+ *                       type: string
  *       400:
- *         description: Invalid pagination parameters
+ *         description: Invalid query parameters
  *       500:
  *         description: Internal server error
  */
@@ -65,11 +106,6 @@ const trainsPage = (req, res) => {
 const trainsApi = async (req, res) => {
     const pageValue = req.query.page ?? '1';
     const limitValue = req.query.limit ?? '10';
-
-    const validInteger = (value) =>
-        typeof value === 'string' &&
-        /^[1-9]\d*$/.test(value) &&
-        Number.isSafeInteger(Number(value));
 
     if (!validInteger(pageValue)) {
         return res.status(400).json({
@@ -93,14 +129,46 @@ const trainsApi = async (req, res) => {
         });
     }
 
+    const filters = {};
+
+    for (const field of filterFields) {
+        const value = req.query[field] ?? '';
+
+        if (typeof value !== 'string' || value.length > 100) {
+            return res.status(400).json({
+                error: `${field} must be a string of at most 100 characters.`
+            });
+        }
+
+        filters[field] = value.trim();
+    }
+
+    const query = {};
+
+    if (filters.search) {
+        query.name = {
+            $regex: escapeRegex(filters.search),
+            $options: 'i'
+        };
+    }
+
+    for (const field of ['operator', 'type', 'powerSource']) {
+        if (filters[field]) {
+            query[field] = {
+                $regex: `^${escapeRegex(filters[field])}$`,
+                $options: 'i'
+            };
+        }
+    }
+
     try {
         const collection = getDb().collection('trains');
 
-        const totalItems = await collection.countDocuments({});
+        const totalItems = await collection.countDocuments(query);
         const totalPages = Math.ceil(totalItems / limit);
 
         const trains = await collection
-            .find({})
+            .find(query)
             .sort({ name: 1, _id: 1 })
             .skip(skip)
             .limit(limit)
@@ -115,7 +183,8 @@ const trainsApi = async (req, res) => {
                 totalPages,
                 hasNextPage: page < totalPages,
                 hasPreviousPage: page > 1 && totalPages > 0
-            }
+            },
+            filters
         });
     } catch (error) {
         console.error('Error fetching trains:', error);
