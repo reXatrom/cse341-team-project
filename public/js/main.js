@@ -1,16 +1,26 @@
+
 const hookRegionSorter = () => {
     const regionSelect = document.getElementById('region-filter');
-    if (regionSelect) {
-        regionSelect.addEventListener('change', () => {
-            const selectedRegion = regionSelect.value;
-            const url = new URL(window.location.href);
 
-            if (selectedRegion && selectedRegion !== 'all') {
-                url.searchParams.set('region', selectedRegion);
+    if (regionSelect) {
+        const params = new URLSearchParams(window.location.search);
+        const selectedRegion = params.get('region');
+
+        if (selectedRegion) {
+            regionSelect.value = selectedRegion;
+        }
+
+        regionSelect.addEventListener('change', () => {
+            const url = new URL(window.location.href);
+            const region = regionSelect.value;
+
+            if (region && region !== 'all') {
+                url.searchParams.set('region', region);
             } else {
                 url.searchParams.delete('region');
             }
-            
+
+            url.searchParams.delete('page');
             window.location.href = url.toString();
         });
     }
@@ -18,74 +28,208 @@ const hookRegionSorter = () => {
 
 const hookSeasonSorter = () => {
     const seasonSelect = document.getElementById('season-filter');
-    if (seasonSelect) {
-        seasonSelect.addEventListener('change', () => {
-            const selectedSeason = seasonSelect.value;
-            const url = new URL(window.location.href);
 
-            if (selectedSeason && selectedSeason !== 'all') {
-                url.searchParams.set('season', selectedSeason);
+    if (seasonSelect) {
+        const params = new URLSearchParams(window.location.search);
+        const selectedSeason = params.get('season');
+
+        if (selectedSeason) {
+            seasonSelect.value = selectedSeason;
+        }
+
+        seasonSelect.addEventListener('change', () => {
+            const url = new URL(window.location.href);
+            const season = seasonSelect.value;
+
+            if (season && season !== 'all') {
+                url.searchParams.set('season', season);
             } else {
                 url.searchParams.delete('season');
             }
-            
+
+            url.searchParams.delete('page');
             window.location.href = url.toString();
         });
     }
 };
 
-const hookTrainsCatalog = async () => {
+const hookTrainsCatalog = () => {
     const listEl = document.getElementById('trains-list');
     const templateEl = document.getElementById('train-card-template');
     const loadingEl = document.getElementById('trains-loading');
     const errorEl = document.getElementById('trains-error');
 
+    const previousButton = document.getElementById('trains-previous');
+    const nextButton = document.getElementById('trains-next');
+    const pageInfo = document.getElementById('trains-page-info');
+
     if (!listEl || !templateEl) {
         return;
     }
 
-    try {
-        const response = await fetch('/api/trains');
-        if (!response.ok) {
-            throw new Error(`Failed to load trains (${response.status})`);
+    const initialParams = new URLSearchParams(window.location.search);
+    const initialPage = Number(initialParams.get('page'));
+
+    let currentPage = Number.isSafeInteger(initialPage) && initialPage > 0
+        ? initialPage
+        : 1;
+
+    const pageLimit = 10;
+    let requestController = null;
+
+    const loadTrains = async (page) => {
+        if (requestController) {
+            requestController.abort();
         }
 
-        const payload = await response.json();
-        const trains = payload.trains || [];
-        const fragment = document.createDocumentFragment();
+        requestController = new AbortController();
 
-        trains.forEach((train) => {
-            const card = templateEl.content.cloneNode(true);
-            const imageEl = card.querySelector('[data-field="image"]');
+        // Preserve existing URL filters when requesting another page.
+        const params = new URLSearchParams(window.location.search);
 
-            imageEl.src = train.imageUrl;
-            imageEl.alt = train.imageAlt || `${train.name} train`;
+        params.set('page', String(page));
+        params.set('limit', String(pageLimit));
 
-            card.querySelector('[data-field="name"]').textContent = train.name;
-            card.querySelector('[data-field="operator"]').textContent = train.operator;
-            card.querySelector('[data-field="type"]').textContent = train.type;
-            card.querySelector('[data-field="speed"]').textContent = `${train.maxSpeedKmh} km/h`;
-            card.querySelector('[data-field="seats"]').textContent = `${train.capacity} seats`;
-            card.querySelector('[data-field="power"]').textContent = train.powerSource;
-            card.querySelector('[data-field="description"]').textContent = train.description;
-            card.querySelector('[data-field="best-for"]').textContent = train.bestFor;
-
-            fragment.appendChild(card);
-        });
-
-        listEl.replaceChildren(fragment);
         if (loadingEl) {
-            loadingEl.hidden = true;
+            loadingEl.hidden = false;
         }
-    } catch (error) {
-        if (loadingEl) {
-            loadingEl.hidden = true;
-        }
+
         if (errorEl) {
-            errorEl.hidden = false;
-            errorEl.textContent = 'Unable to load trains right now. Please try again in a moment.';
+            errorEl.hidden = true;
         }
+
+        if (previousButton) {
+            previousButton.disabled = true;
+        }
+
+        if (nextButton) {
+            nextButton.disabled = true;
+        }
+
+        try {
+            const response = await fetch(
+                `/api/trains?${params.toString()}`,
+                { signal: requestController.signal }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to load trains.');
+            }
+
+            const payload = await response.json();
+            const trains = payload.trains || [];
+            const pagination = payload.pagination;
+
+            if (!Array.isArray(trains) || !pagination) {
+                throw new Error('Invalid pagination response.');
+            }
+
+            const fragment = document.createDocumentFragment();
+
+            trains.forEach((train) => {
+                const card = templateEl.content.cloneNode(true);
+
+                const imageEl = card.querySelector(
+                    '[data-field="image"]'
+                );
+
+                if (imageEl) {
+                    if (train.imageUrl) {
+                        imageEl.src = train.imageUrl;
+                        imageEl.alt = train.imageAlt ||
+                            `${train.name} train`;
+                    } else {
+                        imageEl.remove();
+                    }
+                }
+
+                const setField = (field, value) => {
+                    const element = card.querySelector(
+                        `[data-field="${field}"]`
+                    );
+
+                    if (element) {
+                        element.textContent = value ?? '';
+                    }
+                };
+
+                setField('name', train.name);
+                setField('operator', train.operator);
+                setField('type', train.type);
+                setField(
+                    'speed',
+                    train.maxSpeedKmh == null
+                        ? ''
+                        : `${train.maxSpeedKmh} km/h`
+                );
+                setField(
+                    'seats',
+                    train.capacity == null
+                        ? ''
+                        : `${train.capacity} seats`
+                );
+                setField('power', train.powerSource);
+                setField('description', train.description);
+                setField('best-for', train.bestFor);
+
+                fragment.appendChild(card);
+            });
+
+            listEl.replaceChildren(fragment);
+            currentPage = pagination.page;
+
+            if (pageInfo) {
+                pageInfo.textContent = pagination.totalItems === 0
+                    ? 'No trains available'
+                    : `Page ${pagination.page} of ${pagination.totalPages}`;
+            }
+
+            if (previousButton) {
+                previousButton.disabled =
+                    !pagination.hasPreviousPage;
+            }
+
+            if (nextButton) {
+                nextButton.disabled = !pagination.hasNextPage;
+            }
+
+            if (loadingEl) {
+                loadingEl.hidden = true;
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                return;
+            }
+
+            console.error('Train loading error:', error);
+
+            if (loadingEl) {
+                loadingEl.hidden = true;
+            }
+
+            if (errorEl) {
+                errorEl.hidden = false;
+                errorEl.textContent =
+                    'Unable to load trains. Please try again.';
+            }
+        }
+    };
+
+    if (previousButton) {
+        previousButton.addEventListener('click', () => {
+            if (currentPage > 1) {
+                loadTrains(currentPage - 1);
+            }
+        });
     }
+
+    if (nextButton) {
+        nextButton.addEventListener('click', () => {
+            loadTrains(currentPage + 1);
+        });
+    }
+
+    loadTrains(currentPage);
 };
 
 document.addEventListener('DOMContentLoaded', () => {

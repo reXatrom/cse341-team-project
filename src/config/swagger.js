@@ -7,7 +7,8 @@ const options = {
     info: {
       title: 'Kizuna Rail Trips API',
       version: '1.0.0',
-      description: 'API documentation for managing scenic railway trips.'
+      description:
+        'API documentation for Kizuna Rail trips and trains.'
     },
     servers: [
       {
@@ -19,10 +20,17 @@ const options = {
       {
         name: 'Trips',
         description: 'Operations for managing railway trips'
+      },
+      {
+        name: 'Trains',
+        description: 'Train catalogue and pagination'
       }
     ]
   },
-  apis: ['./src/routes/trips-api.js']
+  apis: [
+    './src/routes/trips-api.js',
+    './src/routes/trains.js'
+  ]
 };
 
 const swaggerSpec = swaggerJsdoc(options);
