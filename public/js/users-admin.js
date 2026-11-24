@@ -5,25 +5,75 @@ const editSection = document.getElementById('edit-user-section');
 const editForm = document.getElementById('edit-user-form');
 
 let users = [];
+let currentPage = 1;
+let paginationMeta = null;
+
+const usersPerPage = 10;
+
+// Create pagination controls.
+const paginationContainer = document.createElement('div');
+paginationContainer.id = 'users-pagination';
+
+const previousButton = document.createElement('button');
+previousButton.type = 'button';
+previousButton.textContent = 'Previous';
+
+const pageInfo = document.createElement('span');
+pageInfo.id = 'users-page-info';
+
+const nextButton = document.createElement('button');
+nextButton.type = 'button';
+nextButton.textContent = 'Next';
+
+paginationContainer.append(
+  previousButton,
+  pageInfo,
+  nextButton
+);
+
+usersContainer.insertAdjacentElement(
+  'afterend',
+  paginationContainer
+);
 
 function showMessage(message, isError = false) {
   usersMessage.textContent = message;
   usersMessage.style.color = isError ? 'red' : 'green';
 }
 
-async function loadUsers() {
+async function loadUsers(page = currentPage) {
   try {
-    const response = await fetch('/api/users');
+    showMessage('');
+
+    const response = await fetch(
+      `/api/users?page=${page}&limit=${usersPerPage}`
+    );
+
+    const result = await response.json();
 
     if (!response.ok) {
-      throw new Error('Unable to retrieve users.');
+      throw new Error(result.error || 'Unable to retrieve users.');
     }
 
-    users = await response.json();
+    users = result.data;
+    paginationMeta = result.meta;
+    currentPage = paginationMeta.page;
+
+    // If the current page no longer exists, go back to the last page.
+    if (
+      paginationMeta.totalPages > 0 &&
+      currentPage > paginationMeta.totalPages
+    ) {
+      await loadUsers(paginationMeta.totalPages);
+      return;
+    }
+
     displayUsers();
+    displayPagination();
   } catch (error) {
     showMessage(error.message, true);
     usersContainer.textContent = '';
+    paginationContainer.hidden = true;
   }
 }
 
@@ -73,6 +123,41 @@ function displayUsers() {
   });
 }
 
+function displayPagination() {
+  if (!paginationMeta) {
+    paginationContainer.hidden = true;
+    return;
+  }
+
+  const {
+    page,
+    totalPages,
+    hasNextPage,
+    hasPreviousPage
+  } = paginationMeta;
+
+  paginationContainer.hidden = totalPages <= 1;
+
+  pageInfo.textContent = ` Page ${page} of ${totalPages} `;
+
+  previousButton.disabled = !hasPreviousPage;
+  nextButton.disabled = !hasNextPage;
+}
+
+// Go to the previous page.
+previousButton.addEventListener('click', () => {
+  if (paginationMeta?.hasPreviousPage) {
+    loadUsers(currentPage - 1);
+  }
+});
+
+// Go to the next page.
+nextButton.addEventListener('click', () => {
+  if (paginationMeta?.hasNextPage) {
+    loadUsers(currentPage + 1);
+  }
+});
+
 // Show the edit form with the selected user's details.
 function editUser(user) {
   document.getElementById('edit-user-id').value = user._id;
@@ -113,7 +198,8 @@ editForm.addEventListener('submit', async (event) => {
 
     showMessage(data.message);
     editSection.hidden = true;
-    await loadUsers();
+
+    await loadUsers(currentPage);
   } catch (error) {
     showMessage(error.message, true);
   }
@@ -147,11 +233,12 @@ async function removeUser(user) {
     }
 
     showMessage(data.message);
-    await loadUsers();
+
+    await loadUsers(currentPage);
   } catch (error) {
     showMessage(error.message, true);
   }
 }
 
 // Load users when the page opens.
-loadUsers();
+loadUsers(1);

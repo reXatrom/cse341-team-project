@@ -1,31 +1,115 @@
 
 import mongoose from 'mongoose';
 import {
-  getAllUsers,
+  getPaginatedUsers,
   getUserById,
   updateUser,
   deleteUser
 } from '../models/users.js';
 
 // GET /api/users
-// Admins can see all users. Regular users can only see themselves.
+// Admins can see all users with pagination.
+// Regular users can only see themselves.
 export async function getUsers(req, res) {
   try {
-    if (req.session.user.role === 'admin') {
-      const users = await getAllUsers();
-      return res.status(200).json(users);
+    const pageValue = req.query.page ?? '1';
+    const limitValue = req.query.limit ?? '10';
+    const sort = req.query.sort ?? 'username';
+    const order = req.query.order ?? 'asc';
+
+    // Validate page number.
+    if (!/^\d+$/.test(String(pageValue))) {
+      return res.status(400).json({
+        error: 'Page must be a positive integer.'
+      });
     }
 
+    const page = Number(pageValue);
+
+    if (!Number.isSafeInteger(page) || page < 1) {
+      return res.status(400).json({
+        error: 'Page must be a positive integer.'
+      });
+    }
+
+    // Validate limit.
+    if (!/^\d+$/.test(String(limitValue))) {
+      return res.status(400).json({
+        error: 'Limit must be a positive integer.'
+      });
+    }
+
+    const limit = Number(limitValue);
+
+    if (
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 100
+    ) {
+      return res.status(400).json({
+        error: 'Limit must be between 1 and 100.'
+      });
+    }
+
+    // Only allow supported sort fields.
+    const allowedSortFields = [
+      'username',
+      'displayName',
+      'email'
+    ];
+
+    if (!allowedSortFields.includes(sort)) {
+      return res.status(400).json({
+        error: 'Invalid sort field.',
+        allowedSortFields
+      });
+    }
+
+    // Validate sort order.
+    if (!['asc', 'desc'].includes(order)) {
+      return res.status(400).json({
+        error: 'Order must be either asc or desc.'
+      });
+    }
+
+    // Admins can view all users with pagination.
+    if (req.session.user.role === 'admin') {
+      const result = await getPaginatedUsers({
+        page,
+        limit,
+        sort,
+        order
+      });
+
+      return res.status(200).json(result);
+    }
+
+    // Regular users can only view their own account.
     const user = await getUserById(req.session.user.id);
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({
+        error: 'User not found.'
+      });
     }
 
-    return res.status(200).json([user]);
+    return res.status(200).json({
+      data: [user],
+      meta: {
+        page: 1,
+        limit: 1,
+        totalItems: 1,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false
+      }
+    });
   } catch (error) {
     console.error('Error retrieving users:', error);
-    return res.status(500).json({ error: 'Failed to retrieve users.' });
+
+    return res.status(500).json({
+      error: 'Failed to retrieve users.'
+    });
   }
 }
 
@@ -37,7 +121,9 @@ export async function editUser(req, res) {
     const body = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid user ID.' });
+      return res.status(400).json({
+        error: 'Invalid user ID.'
+      });
     }
 
     const isAdmin = req.session.user.role === 'admin';
@@ -135,7 +221,9 @@ export async function editUser(req, res) {
     const updatedUser = await updateUser(id, body);
 
     if (!updatedUser) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({
+        error: 'User not found.'
+      });
     }
 
     return res.status(200).json({
@@ -155,7 +243,9 @@ export async function editUser(req, res) {
       error.name === 'ValidationError' ||
       error.name === 'CastError'
     ) {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({
+        error: error.message
+      });
     }
 
     return res.status(500).json({
@@ -171,7 +261,9 @@ export async function removeUser(req, res) {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid user ID.' });
+      return res.status(400).json({
+        error: 'Invalid user ID.'
+      });
     }
 
     const isAdmin = req.session.user.role === 'admin';
@@ -186,7 +278,9 @@ export async function removeUser(req, res) {
     const deletedUser = await deleteUser(id);
 
     if (!deletedUser) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({
+        error: 'User not found.'
+      });
     }
 
     // End the session if the user deleted their own account.
@@ -194,6 +288,7 @@ export async function removeUser(req, res) {
       return req.session.destroy((error) => {
         if (error) {
           console.error('Error destroying session:', error);
+
           return res.status(500).json({
             error: 'Account deleted, but session could not be ended.'
           });
@@ -211,6 +306,7 @@ export async function removeUser(req, res) {
     });
   } catch (error) {
     console.error('Error deleting user:', error);
+
     return res.status(500).json({
       error: 'Failed to delete user.'
     });
