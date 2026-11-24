@@ -8,7 +8,7 @@ import {
 } from '../models/users.js';
 
 // GET /api/users
-// Admins can see all users with pagination.
+// Admins can see all users with pagination, role filtering, and search.
 // Regular users can only see themselves.
 export async function getUsers(req, res) {
   try {
@@ -16,6 +16,8 @@ export async function getUsers(req, res) {
     const limitValue = req.query.limit ?? '10';
     const sort = req.query.sort ?? 'username';
     const order = req.query.order ?? 'asc';
+    const role = req.query.role;
+    const q = req.query.q;
 
     // Validate page number.
     if (!/^\d+$/.test(String(pageValue))) {
@@ -72,13 +74,35 @@ export async function getUsers(req, res) {
       });
     }
 
-    // Admins can view all users with pagination.
+    // Validate role filter.
+    if (
+      role !== undefined &&
+      (typeof role !== 'string' || !['user', 'admin'].includes(role.toLowerCase()))
+    ) {
+      return res.status(400).json({
+        error: 'Role must be either user or admin.'
+      });
+    }
+
+    // Validate keyword search.
+    if (
+      q !== undefined &&
+      (typeof q !== 'string' || q.trim().length > 100)
+    ) {
+      return res.status(400).json({
+        error: 'Search query must be a string of no more than 100 characters.'
+      });
+    }
+
+    // Admins can view all users with pagination and optional filters.
     if (req.session.user.role === 'admin') {
       const result = await getPaginatedUsers({
         page,
         limit,
         sort,
-        order
+        order,
+        role: role?.toLowerCase(),
+        q: q?.trim()
       });
 
       return res.status(200).json(result);

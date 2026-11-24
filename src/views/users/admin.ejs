@@ -27,6 +27,33 @@
     </form>
   </section>
 
+  <section id="users-filters" aria-label="Filter users">
+    <h2>Search and Filter Users</h2>
+
+    <div>
+      <label for="user-search">Search users</label>
+      <input
+        type="search"
+        id="user-search"
+        placeholder="Search by name, username, or email"
+        maxlength="100"
+      >
+    </div>
+
+    <div>
+      <label for="user-role-filter">Filter by role</label>
+      <select id="user-role-filter">
+        <option value="">All Roles</option>
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+
+    <button type="button" id="clear-user-filters">
+      Clear Filters
+    </button>
+  </section>
+
   <section id="users-container">
     <p>Loading users...</p>
   </section>

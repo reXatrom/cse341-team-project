@@ -18,8 +18,8 @@ router.use(requireApiLogin());
  *   get:
  *     tags:
  *       - Users
- *     summary: Get users with pagination
- *     description: Admins can retrieve all users with pagination and sorting. Regular users can only retrieve their own account.
+ *     summary: Get users with pagination, filtering, and search
+ *     description: Admins can retrieve users with pagination, sorting, role filtering, and keyword search across display names, usernames, and email addresses. Regular users can only retrieve their own account.
  *     security:
  *       - cookieAuth: []
  *     parameters:
@@ -56,15 +56,29 @@ router.use(requireApiLogin());
  *           enum: [asc, desc]
  *           default: asc
  *         description: Sorting direction
+ *       - in: query
+ *         name: role
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [user, admin]
+ *         description: Filter users by role
+ *       - in: query
+ *         name: q
+ *         required: false
+ *         schema:
+ *           type: string
+ *           maxLength: 100
+ *         description: Search display names, usernames, and email addresses
  *     responses:
  *       200:
- *         description: Paginated list of users
+ *         description: Paginated and filtered list of users
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/PaginatedUsersResponse'
  *       400:
- *         description: Invalid pagination or sorting parameters
+ *         description: Invalid pagination, sorting, role, or search parameters
  *         content:
  *           application/json:
  *             schema:
