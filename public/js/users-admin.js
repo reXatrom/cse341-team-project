@@ -4,11 +4,17 @@ const usersMessage = document.getElementById('users-message');
 const editSection = document.getElementById('edit-user-section');
 const editForm = document.getElementById('edit-user-form');
 
+const searchInput = document.getElementById('user-search');
+const roleFilter = document.getElementById('user-role-filter');
+const clearFiltersButton = document.getElementById('clear-user-filters');
+
 let users = [];
 let currentPage = 1;
 let paginationMeta = null;
 
 const usersPerPage = 10;
+let searchTimeout;
+let activeRequest = 0;
 
 // Create pagination controls.
 const paginationContainer = document.createElement('div');
@@ -41,15 +47,40 @@ function showMessage(message, isError = false) {
   usersMessage.style.color = isError ? 'red' : 'green';
 }
 
+// Build the API URL using the current filters.
+function buildUsersUrl(page) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(usersPerPage)
+  });
+
+  const searchTerm = searchInput.value.trim();
+  const selectedRole = roleFilter.value;
+
+  if (searchTerm) {
+    params.set('q', searchTerm);
+  }
+
+  if (selectedRole) {
+    params.set('role', selectedRole);
+  }
+
+  return `/api/users?${params.toString()}`;
+}
+
 async function loadUsers(page = currentPage) {
+  const requestId = ++activeRequest;
+
   try {
     showMessage('');
 
-    const response = await fetch(
-      `/api/users?page=${page}&limit=${usersPerPage}`
-    );
-
+    const response = await fetch(buildUsersUrl(page));
     const result = await response.json();
+
+    // Ignore an older request if a newer filter request has started.
+    if (requestId !== activeRequest) {
+      return;
+    }
 
     if (!response.ok) {
       throw new Error(result.error || 'Unable to retrieve users.');
@@ -59,7 +90,7 @@ async function loadUsers(page = currentPage) {
     paginationMeta = result.meta;
     currentPage = paginationMeta.page;
 
-    // If the current page no longer exists, go back to the last page.
+    // If the current page no longer exists, return to the last page.
     if (
       paginationMeta.totalPages > 0 &&
       currentPage > paginationMeta.totalPages
@@ -71,6 +102,10 @@ async function loadUsers(page = currentPage) {
     displayUsers();
     displayPagination();
   } catch (error) {
+    if (requestId !== activeRequest) {
+      return;
+    }
+
     showMessage(error.message, true);
     usersContainer.textContent = '';
     paginationContainer.hidden = true;
@@ -156,6 +191,34 @@ nextButton.addEventListener('click', () => {
   if (paginationMeta?.hasNextPage) {
     loadUsers(currentPage + 1);
   }
+});
+
+// Search after the user stops typing.
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+
+  searchTimeout = setTimeout(() => {
+    currentPage = 1;
+    loadUsers(1);
+  }, 400);
+});
+
+// Apply role filter immediately.
+roleFilter.addEventListener('change', () => {
+  clearTimeout(searchTimeout);
+  currentPage = 1;
+  loadUsers(1);
+});
+
+// Clear all filters.
+clearFiltersButton.addEventListener('click', () => {
+  clearTimeout(searchTimeout);
+
+  searchInput.value = '';
+  roleFilter.value = '';
+
+  currentPage = 1;
+  loadUsers(1);
 });
 
 // Show the edit form with the selected user's details.

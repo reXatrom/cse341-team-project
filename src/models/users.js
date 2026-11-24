@@ -1,12 +1,13 @@
 
 import bcrypt from 'bcryptjs';
 import User from './schemas/users.js';
+import { getRoleByName } from './roles.js';
 
-// Create a user with a securely hashed password.
+// Create a new user.
 export async function createUser(userData) {
-  const passwordHash = await bcrypt.hash(userData.password, 12);
+  const passwordHash = await bcrypt.hash(userData.password, 10);
 
-  const user = await User.create({
+  const user = new User({
     displayName: userData.displayName,
     username: userData.username,
     email: userData.email,
@@ -14,41 +15,31 @@ export async function createUser(userData) {
     role: userData.role
   });
 
-  // Never expose the password hash.
-  const safeUser = user.toObject();
-  delete safeUser.passwordHash;
-
-  return safeUser;
+  return user.save();
 }
 
-// Find a user by username or email for login.
-export async function getUserForLogin(identifier) {
-  return User.findOne({
-    $or: [
-      { username: identifier.toLowerCase() },
-      { email: identifier.toLowerCase() }
-    ]
-  })
+// Find a user by username for login.
+export async function getUserForLogin(username) {
+  return User.findOne({ username: username.toLowerCase() })
     .select('+passwordHash')
     .populate('role', 'name')
     .lean();
 }
 
-// Find a user by their database ID.
+// Find a user by ID.
 export async function getUserById(id) {
   return User.findById(id)
+    .select('-passwordHash')
     .populate('role', 'name')
     .lean();
 }
 
-// Verify a submitted password against its stored hash.
+// Verify a user's password.
 export async function verifyPassword(password, passwordHash) {
   return bcrypt.compare(password, passwordHash);
 }
 
-
-
-// Get all users without exposing their password hashes.
+// Get all users.
 export async function getAllUsers() {
   return User.find({})
     .select('-passwordHash')
@@ -56,35 +47,63 @@ export async function getAllUsers() {
     .lean();
 }
 
-
-
-/**
- * Get a paginated list of users.
- */
+// Get paginated users with optional role filtering and keyword search.
 export async function getPaginatedUsers({
   page,
   limit,
   sort = 'username',
-  order = 'asc'
+  order = 'asc',
+  role,
+  q
 }) {
   const sortDirection = order === 'desc' ? -1 : 1;
-
-  const sortOptions = {
-    [sort]: sortDirection
-  };
-
+  const sortOptions = { [sort]: sortDirection };
   const skip = (page - 1) * limit;
 
+  const filter = {};
+
+  // Filter users by role name.
+  if (role) {
+    const roleDocument = await getRoleByName(role);
+
+    if (!roleDocument) {
+      return {
+        data: [],
+        meta: {
+          page,
+          limit,
+          totalItems: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false
+        }
+      };
+    }
+
+    filter.role = roleDocument._id;
+  }
+
+  // Search display name, username, and email.
+  if (q) {
+    const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escapedQuery, 'i');
+
+    filter.$or = [
+      { displayName: searchRegex },
+      { username: searchRegex },
+      { email: searchRegex }
+    ];
+  }
+
   const [users, totalItems] = await Promise.all([
-    User.find({})
+    User.find(filter)
       .select('-passwordHash')
       .populate('role', 'name')
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
       .lean(),
-
-    User.countDocuments({})
+    User.countDocuments(filter)
   ]);
 
   const totalPages = Math.ceil(totalItems / limit);
@@ -102,51 +121,40 @@ export async function getPaginatedUsers({
   };
 }
 
+// Update a user.
+export async function updateUser(id, updateData) {
+  const updates = {};
 
-
-
-// Update a user's information.
-export async function updateUser(id, userData) {
-  const updateData = {};
-
-  if (userData.displayName !== undefined) {
-    updateData.displayName = userData.displayName;
+  if (updateData.displayName !== undefined) {
+    updates.displayName = updateData.displayName;
   }
 
-  if (userData.username !== undefined) {
-    updateData.username = userData.username;
+  if (updateData.username !== undefined) {
+    updates.username = updateData.username;
   }
 
-  if (userData.email !== undefined) {
-    updateData.email = userData.email;
+  if (updateData.email !== undefined) {
+    updates.email = updateData.email;
   }
 
-  // Hash a new password before saving it.
-// Validate and hash a new password before saving it.
-if (userData.password !== undefined && userData.password !== '') {
-  if (typeof userData.password !== 'string' || userData.password.length < 8) {
-    throw new Error('Password must be at least 8 characters long.');
+  if (updateData.password) {
+    updates.passwordHash = await bcrypt.hash(updateData.password, 10);
   }
 
-  updateData.passwordHash = await bcrypt.hash(userData.password, 12);
-}
+  if (updateData.role !== undefined) {
+    updates.role = updateData.role;
+  }
 
-  const user = await User.findByIdAndUpdate(
-    id,
-    { $set: updateData },
-    { returnDocument: 'after', runValidators: true }
-  )
+  return User.findByIdAndUpdate(id, updates, {
+    new: true,
+    runValidators: true
+  })
     .select('-passwordHash')
     .populate('role', 'name')
     .lean();
-
-  return user;
 }
 
-// Delete a user by their database ID.
+// Delete a user.
 export async function deleteUser(id) {
-  return User.findByIdAndDelete(id)
-    .select('-passwordHash')
-    .populate('role', 'name')
-    .lean();
+  return User.findByIdAndDelete(id).lean();
 }
