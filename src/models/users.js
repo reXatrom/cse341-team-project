@@ -56,6 +56,55 @@ export async function getAllUsers() {
     .lean();
 }
 
+
+
+/**
+ * Get a paginated list of users.
+ */
+export async function getPaginatedUsers({
+  page,
+  limit,
+  sort = 'username',
+  order = 'asc'
+}) {
+  const sortDirection = order === 'desc' ? -1 : 1;
+
+  const sortOptions = {
+    [sort]: sortDirection
+  };
+
+  const skip = (page - 1) * limit;
+
+  const [users, totalItems] = await Promise.all([
+    User.find({})
+      .select('-passwordHash')
+      .populate('role', 'name')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+
+    User.countDocuments({})
+  ]);
+
+  const totalPages = Math.ceil(totalItems / limit);
+
+  return {
+    data: users,
+    meta: {
+      page,
+      limit,
+      totalItems,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1
+    }
+  };
+}
+
+
+
+
 // Update a user's information.
 export async function updateUser(id, userData) {
   const updateData = {};

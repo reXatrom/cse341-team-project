@@ -30,7 +30,7 @@ if (NODE_ENV === 'production') {
     app.set('trust proxy', 1);
 }
 
-// Combine Trips and Schedules Swagger documentation.
+// Combine Trips, Users, and Schedules Swagger documentation.
 const swaggerSpec = {
     ...tripsSwaggerSpec,
     info: {
@@ -40,7 +40,9 @@ const swaggerSpec = {
     },
     tags: [
         { name: 'Trips', description: 'Operations for managing railway trips' },
-        { name: 'Schedules', description: 'Schedule management endpoints' }
+        { name: 'Trains', description: 'Train catalogue and pagination' },
+        { name: 'Schedules', description: 'Schedule management endpoints' },
+        { name: 'Users', description: 'User management and pagination' }
     ],
     paths: {
         ...tripsSwaggerSpec.paths,
