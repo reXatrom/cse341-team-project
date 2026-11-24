@@ -2,16 +2,20 @@
 import { Router } from 'express';
 import railTripsRouter from './trips.js';
 import tripsApiRouter from './trips-api.js';
+import bookingsApiRouter from './bookings.js';
 import { trainsApi, trainsPage } from './trains.js';
 import { homePage, aboutPage, testErrorPage } from './index.js';
 import schedulesRouter from './schedules.js';
 import authRouter from './auth.js';
-import { requirePageRole } from '../middleware/auth.js';
+import {
+    requirePageRole
+} from '../middleware/auth.js';
 
 import {
     adminDashboard,
     usersAdminPage,
-    tripsAdminPage
+    tripsAdminPage,
+    bookingsAdminPage
 } from '../controllers/admin.js';
 
 import usersApiRouter from './users.js';
@@ -41,6 +45,13 @@ router.get(
     usersAdminPage
 );
 
+// Protected Bookings Management page
+router.get(
+    '/admin/bookings',
+    requirePageRole('admin'),
+    bookingsAdminPage
+);
+
 // Protected Trips Management page
 router.get(
     '/trips-admin',
@@ -56,6 +67,9 @@ router.get('/api/trains', trainsApi);
 
 // Trips API
 router.use('/api/trips', tripsApiRouter);
+
+// Bookings API
+router.use('/api/bookings', bookingsApiRouter);
 
 // Schedules API
 router.use('/api/schedules', schedulesRouter);

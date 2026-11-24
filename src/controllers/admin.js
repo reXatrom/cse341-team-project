@@ -16,3 +16,9 @@ export function tripsAdminPage(req, res) {
         title: 'Trips Management'
     });
 }
+
+export function bookingsAdminPage(req, res) {
+    return res.render('admin/bookings-admin', {
+        title: 'Bookings Management'
+    });
+}

@@ -8,7 +8,7 @@ const options = {
       title: 'Kizuna Rail Trips API',
       version: '1.0.0',
       description:
-        'API documentation for Kizuna Rail trips and trains.'
+        'API documentation for Kizuna Rail trips, trains, and bookings.'
     },
     servers: [
       {
@@ -16,6 +16,15 @@ const options = {
         description: 'Current application server'
       }
     ],
+    components: {
+      securitySchemes: {
+        sessionAuth: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'connect.sid'
+        }
+      }
+    },
     tags: [
       {
         name: 'Trips',
@@ -24,12 +33,17 @@ const options = {
       {
         name: 'Trains',
         description: 'Train catalogue and pagination'
+      },
+      {
+        name: 'Bookings',
+        description: 'Administrator operations for viewing bookings'
       }
     ]
   },
   apis: [
     './src/routes/trips-api.js',
-    './src/routes/trains.js'
+    './src/routes/trains.js',
+    './src/routes/bookings.js'
   ]
 };
 
