@@ -1,0 +1,61 @@
+
+<%- include('../partials/header') %>
+
+<main class="container">
+    <h1>Bookings Management</h1>
+    <p>View and manage customer bookings.</p>
+
+    <div
+        id="bookings-message"
+        role="status"
+        aria-live="polite"
+    >
+        Loading bookings...
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Booking Reference</th>
+                    <th>Booking Date</th>
+                    <th>Ticket Class</th>
+                    <th>Travel Day</th>
+                    <th>Passengers</th>
+                </tr>
+            </thead>
+            <tbody id="bookings-table-body">
+                <tr>
+                    <td colspan="5">Loading bookings...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <nav
+        id="bookings-pagination"
+        aria-label="Bookings pagination"
+    >
+        <button
+            type="button"
+            id="bookings-previous-page"
+            disabled
+        >
+            Previous
+        </button>
+
+        <span id="bookings-page-information">Page 1</span>
+
+        <button
+            type="button"
+            id="bookings-next-page"
+            disabled
+        >
+            Next
+        </button>
+    </nav>
+</main>
+
+<script src="/js/bookings-admin.js" defer></script>
+
+<%- include('../partials/footer') %>
