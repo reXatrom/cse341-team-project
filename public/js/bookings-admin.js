@@ -1,14 +1,20 @@
-
 const tableBody = document.getElementById('bookings-table-body');
 const message = document.getElementById('bookings-message');
 const previousButton = document.getElementById('bookings-previous-page');
 const nextButton = document.getElementById('bookings-next-page');
 const pageInformation = document.getElementById('bookings-page-information');
 
+const filterForm = document.getElementById('bookings-filter-form');
+const ticketClassInput = document.getElementById('bookings-ticket-class');
+const startDateInput = document.getElementById('bookings-start-date');
+const endDateInput = document.getElementById('bookings-end-date');
+const resetFiltersButton = document.getElementById('bookings-reset-filters');
+
 const state = {
     page: 1,
     limit: 10,
     totalPages: 0,
+    filters: {},
     controller: null
 };
 
@@ -57,9 +63,7 @@ function renderBookings(bookings) {
             formatDate(booking.createdAt),
             booking.ticketClass || 'N/A',
             booking.selectedDay || 'N/A',
-            Array.isArray(booking.passengers)
-                ? booking.passengers.length
-                : 0
+            booking.passengerCount ?? 0
         ];
 
         values.forEach((value) => {
@@ -83,7 +87,7 @@ function updatePagination(pagination) {
     nextButton.disabled = !pagination.hasNextPage;
 }
 
-// Retrieve one page of bookings.
+// Retrieve one page of filtered bookings.
 async function loadBookings() {
     if (state.controller) {
         state.controller.abort();
@@ -98,6 +102,12 @@ async function loadBookings() {
     const params = new URLSearchParams({
         page: state.page,
         limit: state.limit
+    });
+
+    Object.entries(state.filters).forEach(([key, value]) => {
+        if (value) {
+            params.set(key, value);
+        }
     });
 
     try {
@@ -130,6 +140,30 @@ async function loadBookings() {
         pageInformation.textContent = 'Unable to load pages';
     }
 }
+
+// Apply selected filters and return to the first page.
+filterForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    state.filters = {
+        ticketClass: ticketClassInput.value,
+        startDate: startDateInput.value,
+        endDate: endDateInput.value
+    };
+
+    state.page = 1;
+    loadBookings();
+});
+
+// Clear all filters and return to the first page.
+resetFiltersButton.addEventListener('click', () => {
+    filterForm.reset();
+
+    state.filters = {};
+    state.page = 1;
+
+    loadBookings();
+});
 
 // Navigate to the previous page.
 previousButton.addEventListener('click', () => {

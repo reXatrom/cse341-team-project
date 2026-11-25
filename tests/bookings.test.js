@@ -254,4 +254,135 @@ describe('Bookings API', () => {
         expect(response.body.pagination.totalItems).toBe(0);
         expect(response.body.pagination.totalPages).toBe(0);
     });
+
+    test('GET /api/bookings filters by ticket class', async () => {
+        await createBookings(3);
+
+        await getDb().collection('confirmations').updateOne(
+            { id: 'BOOKING-002' },
+            { $set: { ticketClass: 'premium' } }
+        );
+
+        const agent = request.agent(app);
+
+        await createAndLoginUser(
+            agent,
+            'admin',
+            'bookingsclassfilter'
+        );
+
+        const response = await agent.get(
+            '/api/bookings?ticketClass=premium'
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0].id).toBe('BOOKING-002');
+        expect(response.body.pagination.totalItems).toBe(1);
+    });
+
+    test('GET /api/bookings filters by inclusive date range', async () => {
+        await createBookings(3);
+
+        const agent = request.agent(app);
+
+        await createAndLoginUser(
+            agent,
+            'admin',
+            'bookingsdatefilter'
+        );
+
+        const response = await agent.get(
+            '/api/bookings?startDate=2026-01-02&endDate=2026-01-02'
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0].id).toBe('BOOKING-002');
+        expect(response.body.pagination.totalItems).toBe(1);
+    });
+
+    test('GET /api/bookings combines ticket class and date filters', async () => {
+        await createBookings(3);
+
+        await getDb().collection('confirmations').updateOne(
+            { id: 'BOOKING-002' },
+            { $set: { ticketClass: 'premium' } }
+        );
+
+        await getDb().collection('confirmations').updateOne(
+            { id: 'BOOKING-003' },
+            { $set: { ticketClass: 'premium' } }
+        );
+
+        const agent = request.agent(app);
+
+        await createAndLoginUser(
+            agent,
+            'admin',
+            'bookingscombinedfilter'
+        );
+
+        const response = await agent.get(
+            '/api/bookings?ticketClass=premium&startDate=2026-01-02&endDate=2026-01-03'
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toHaveLength(2);
+        expect(response.body.data.map((booking) => booking.id)).toEqual([
+            'BOOKING-003',
+            'BOOKING-002'
+        ]);
+        expect(response.body.pagination.totalItems).toBe(2);
+    });
+        test('GET /api/bookings rejects an invalid ticket class', async () => {
+        const agent = request.agent(app);
+
+        await createAndLoginUser(
+            agent,
+            'admin',
+            'bookingsinvalidclass'
+        );
+
+        const response = await agent.get(
+            '/api/bookings?ticketClass=business'
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    test('GET /api/bookings rejects an invalid date', async () => {
+        const agent = request.agent(app);
+
+        await createAndLoginUser(
+            agent,
+            'admin',
+            'bookingsinvaliddate'
+        );
+
+        const response = await agent.get(
+            '/api/bookings?startDate=2026-02-30'
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
+
+    test('GET /api/bookings rejects a date range where start is after end', async () => {
+        const agent = request.agent(app);
+
+        await createAndLoginUser(
+            agent,
+            'admin',
+            'bookingsreversedates'
+        );
+
+        const response = await agent.get(
+            '/api/bookings?startDate=2026-01-05&endDate=2026-01-02'
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('error');
+    });
 });

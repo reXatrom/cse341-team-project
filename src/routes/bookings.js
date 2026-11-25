@@ -12,8 +12,8 @@ router.use(requireApiRole('admin'));
  * @swagger
  * /api/bookings:
  *   get:
- *     summary: Retrieve paginated bookings
- *     description: Returns bookings in descending booking-date order. Only administrators can access this endpoint.
+ *     summary: Retrieve filtered and paginated bookings
+ *     description: Returns bookings in descending booking-date order. Supports filtering by ticket class and booking date range. Only administrators can access this endpoint.
  *     tags: [Bookings]
  *     security:
  *       - sessionAuth: []
@@ -32,9 +32,27 @@ router.use(requireApiRole('admin'));
  *           enum: [10]
  *           default: 10
  *         description: Number of bookings per page. Fixed at 10.
+ *       - in: query
+ *         name: ticketClass
+ *         schema:
+ *           type: string
+ *           enum: [standard, premium, first]
+ *         description: Filter bookings by ticket class.
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Include bookings created on or after this date (YYYY-MM-DD).
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Include bookings created on or before this date (YYYY-MM-DD).
  *     responses:
  *       200:
- *         description: Paginated bookings retrieved successfully.
+ *         description: Filtered and paginated bookings retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -72,7 +90,7 @@ router.use(requireApiRole('admin'));
  *                     hasPreviousPage:
  *                       type: boolean
  *       400:
- *         description: Invalid page or limit parameter.
+ *         description: Invalid pagination or filter parameter.
  *       401:
  *         description: Authentication required.
  *       403:
@@ -81,7 +99,7 @@ router.use(requireApiRole('admin'));
  *         description: Internal server error.
  */
 
-// GET /api/bookings - Retrieve paginated bookings.
+// GET /api/bookings - Retrieve filtered and paginated bookings.
 router.get('/', getBookings);
 
 export default router;

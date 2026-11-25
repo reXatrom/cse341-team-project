@@ -1,7 +1,27 @@
 import { getPaginatedBookings } from '../models/bookings.js';
 
+const validTicketClasses = ['standard', 'premium', 'first'];
+
+// Convert a YYYY-MM-DD value to a valid UTC date.
+function parseDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== value
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
 // GET /api/bookings
-// Retrieve bookings with pagination.
+// Retrieve filtered bookings with pagination.
 export async function getBookings(req, res) {
   try {
     const pageValue = req.query.page ?? '1';
@@ -21,8 +41,63 @@ export async function getBookings(req, res) {
       });
     }
 
+    const { ticketClass, startDate, endDate } = req.query;
+
+    if (
+      ticketClass !== undefined &&
+      (typeof ticketClass !== 'string' ||
+        !validTicketClasses.includes(ticketClass))
+    ) {
+      return res.status(400).json({
+        error: 'Ticket class must be standard, premium, or first.'
+      });
+    }
+
+    if (
+      (startDate !== undefined && typeof startDate !== 'string') ||
+      (endDate !== undefined && typeof endDate !== 'string')
+    ) {
+      return res.status(400).json({
+        error: 'Start date and end date must be valid dates.'
+      });
+    }
+
+    const parsedStartDate = startDate ? parseDate(startDate) : null;
+    const parsedEndDate = endDate ? parseDate(endDate) : null;
+
+    if (
+      (startDate && !parsedStartDate) ||
+      (endDate && !parsedEndDate)
+    ) {
+      return res.status(400).json({
+        error: 'Start date and end date must use a valid YYYY-MM-DD date.'
+      });
+    }
+
+    if (
+      parsedStartDate &&
+      parsedEndDate &&
+      parsedStartDate > parsedEndDate
+    ) {
+      return res.status(400).json({
+        error: 'Start date must be on or before end date.'
+      });
+    }
+
+    const filters = {
+      ticketClass,
+      startDate: parsedStartDate
+        ? parsedStartDate.toISOString()
+        : undefined,
+      endDate: parsedEndDate
+        ? new Date(
+            parsedEndDate.getTime() + 24 * 60 * 60 * 1000
+          ).toISOString()
+        : undefined
+    };
+
     const { bookings, totalItems } =
-      await getPaginatedBookings(page, limit);
+      await getPaginatedBookings(page, limit, filters);
 
     // Return passenger count without exposing passenger contact details.
     const safeBookings = bookings.map(
