@@ -1,9 +1,49 @@
-
 <%- include('../partials/header') %>
 
 <main class="container">
     <h1>Bookings Management</h1>
     <p>View and manage customer bookings.</p>
+
+    <form id="bookings-filter-form">
+        <div>
+            <label for="bookings-ticket-class">
+                Ticket Class
+            </label>
+            <select id="bookings-ticket-class" name="ticketClass">
+                <option value="">All ticket classes</option>
+                <option value="standard">Standard Class</option>
+                <option value="premium">Premium Class</option>
+                <option value="first">First Class</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="bookings-start-date">
+                Booking Date From
+            </label>
+            <input
+                type="date"
+                id="bookings-start-date"
+                name="startDate"
+            >
+        </div>
+
+        <div>
+            <label for="bookings-end-date">
+                Booking Date To
+            </label>
+            <input
+                type="date"
+                id="bookings-end-date"
+                name="endDate"
+            >
+        </div>
+
+        <button type="submit">Apply Filters</button>
+        <button type="button" id="bookings-reset-filters">
+            Reset Filters
+        </button>
+    </form>
 
     <div
         id="bookings-message"
